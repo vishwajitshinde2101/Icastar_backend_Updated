@@ -1,0 +1,142 @@
+# iCastar Platform Application Configuration
+spring:
+  application:
+    name: icastar-platform
+  profiles:
+    active: dev
+  
+  # Database Configuration (MySQL)
+  datasource:
+    url: jdbc:mysql://localhost:3306/icastar?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true
+    username: root
+    password: root
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  # JPA/Hibernate Configuration
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+        format_sql: true
+
+  # Mail Configuration (Placeholder)
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+  # Multipart Configuration for File Uploads
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 50MB
+      max-request-size: 50MB
+      file-size-threshold: 2KB
+      location: ${java.io.tmpdir}
+
+  # JWT Configuration
+  security:
+    jwt:
+      secret: icastar-secret-key-for-jwt-token-generation-2024-this-is-a-very-long-secret-key-that-meets-the-512-bit-requirement-for-hs512-algorithm
+      expiration: 86400000
+
+# Server Configuration
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+
+# Third-party Service Placeholders
+icastar:
+  aws:
+    s3:
+      bucket-name: ${AWS_S3_BUCKET:icastar-uploads}
+      region: ${AWS_REGION:us-east-1}
+      access-key: ${AWS_ACCESS_KEY:}
+      secret-key: ${AWS_SECRET_KEY:}
+  
+  razorpay:
+    key-id: ${RAZORPAY_KEY_ID:}
+    key-secret: ${RAZORPAY_KEY_SECRET:}
+  
+  stripe:
+    public-key: ${STRIPE_PUBLIC_KEY:}
+    secret-key: ${STRIPE_SECRET_KEY:}
+  
+  firebase:
+    project-id: ${FIREBASE_PROJECT_ID:}
+    service-account-path: ${FIREBASE_SERVICE_ACCOUNT_PATH:}
+  
+  otp:
+    expiration-minutes: 5
+    length: 6
+  
+  file:
+    upload-dir: ${FILE_UPLOAD_DIR:uploads/}
+    max-size: 50MB
+
+# Logging Configuration
+logging:
+  level:
+    com.icastar: DEBUG
+    org.springframework.security: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/icastar.log
+
+# Actuator Configuration
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when-authorized
+
+# Flyway Configuration (disabled since migrations already run)
+flyway:
+  enabled: false
+
+# SpringDoc OpenAPI Configuration
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operationsSorter: method
+    tagsSorter: alpha
+    tryItOutEnabled: true
+    filter: true
+    display-request-duration: true
+    display-operation-id: true
+    default-models-expand-depth: 1
+    default-model-expand-depth: 1
+    doc-expansion: none
+    show-extensions: true
+    show-common-extensions: true
+    enabled: true
+    url: /api-docs
+    config-url: /api-docs/swagger-config
+    use-root-path: true
+    validator-url: ""
+    disable-swagger-default-url: true
+  packages-to-scan: com.icastar.platform.controller
+  paths-to-match: /**
+  show-actuator: true
+  group-configs:
+    - group: default
+      paths-to-match: /**
+      packages-to-scan: com.icastar.platform.controller

@@ -1,0 +1,2 @@
+-- This migration is no longer needed as the job_posts table was already removed in V17
+-- This file is kept for migration history but performs no operation

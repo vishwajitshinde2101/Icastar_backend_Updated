@@ -1,0 +1,2 @@
+-- This migration is no longer needed as the column was already renamed in V14
+-- This file is kept for migration history but performs no operation

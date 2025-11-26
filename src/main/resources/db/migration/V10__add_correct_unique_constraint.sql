@@ -1,0 +1,3 @@
+-- This migration is no longer needed as the constraint will be added in V14
+-- after the column is renamed from job_post_id to job_id
+-- This file is kept for migration history but performs no operation

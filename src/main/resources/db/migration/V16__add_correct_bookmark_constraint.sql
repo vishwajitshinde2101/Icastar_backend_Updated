@@ -1,0 +1,3 @@
+-- This migration is no longer needed as the constraint was already added in V5
+-- The unique constraint unique_job_artist_bookmark already exists in the bookmarked_jobs table
+-- This file is kept for migration history but performs no operation

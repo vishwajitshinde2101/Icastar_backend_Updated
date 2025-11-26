@@ -1,0 +1,129 @@
+# Production Environment Configuration
+spring:
+  datasource:
+    url: jdbc:mysql://prod-mysql-server:3306/icastar_prod?useSSL=true&serverTimezone=UTC&allowPublicKeyRetrieval=false
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+  
+  jpa:
+    hibernate:
+      ddl-auto: none  # No automatic schema changes in production
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+        generate_statistics: false
+        jdbc:
+          batch_size: 20
+        order_inserts: true
+        order_updates: true
+
+# Production Server Configuration
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+  tomcat:
+    max-threads: 200
+    min-spare-threads: 10
+    connection-timeout: 20000
+    max-connections: 8192
+
+# Production Logging
+logging:
+  level:
+    com.icastar: INFO
+    org.springframework.security: WARN
+    org.hibernate.SQL: WARN
+    org.springframework.web: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/icastar-prod.log
+    max-size: 100MB
+    max-history: 30
+
+# Production-specific settings
+icastar:
+  file:
+    upload-dir: uploads/prod/
+  otp:
+    expiration-minutes: 5
+    length: 6
+  aws:
+    s3:
+      bucket-name: ${AWS_S3_BUCKET}
+      region: ${AWS_REGION}
+  razorpay:
+    key-id: ${RAZORPAY_KEY_ID}
+    key-secret: ${RAZORPAY_KEY_SECRET}
+  stripe:
+    public-key: ${STRIPE_PUBLIC_KEY}
+    secret-key: ${STRIPE_SECRET_KEY}
+  firebase:
+    project-id: ${FIREBASE_PROJECT_ID}
+    service-account-path: ${FIREBASE_SERVICE_ACCOUNT_PATH}
+
+# Production Actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: never
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+
+# Production SpringDoc
+springdoc:
+  swagger-ui:
+    enabled: false  # Disable Swagger UI in production
+  api-docs:
+    enabled: false  # Disable API docs in production
+
+# Production Mail Configuration
+  mail:
+    host: ${MAIL_HOST}
+    port: 587
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+          connectiontimeout: 5000
+          timeout: 3000
+          writetimeout: 5000
+
+# Production JWT Configuration
+  security:
+    jwt:
+      secret: ${JWT_SECRET}
+      expiration: 3600000  # 1 hour for production
+
+# Production Flyway
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    validate-on-migrate: true
+
+# Production CORS
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:https://icastar.com,https://www.icastar.com}
+  allowed-methods: GET,POST,PUT,DELETE,OPTIONS
+  allowed-headers: "*"
+  allow-credentials: true
+  max-age: 3600
