@@ -19,7 +19,11 @@ public interface JobRepository extends JpaRepository<Job, Long> {
 
     // Find jobs by recruiter
     List<Job> findByRecruiter(User recruiter);
-    
+
+    // Find jobs by recruiter ID
+    @Query("SELECT j FROM Job j WHERE j.recruiter.id = :recruiterId")
+    List<Job> findByRecruiterId(@Param("recruiterId") Long recruiterId);
+
     // Find job by ID with recruiter relationship loaded
     @Query("SELECT j FROM Job j LEFT JOIN FETCH j.recruiter WHERE j.id = :jobId")
     Optional<Job> findByIdWithRecruiter(@Param("jobId") Long jobId);

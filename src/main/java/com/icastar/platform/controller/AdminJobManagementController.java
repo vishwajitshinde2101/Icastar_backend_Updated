@@ -218,7 +218,7 @@ public class AdminJobManagementController {
     public ResponseEntity<Map<String, Object>> updateJob(@PathVariable Long jobId, @RequestBody UpdateJobDto updateDto) {
         log.info("Admin updating job: {}", jobId);
         try {
-            Job job = jobService.updateJob(jobId, updateDto);
+            Job job = jobService.updateJobAsAdmin(jobId, updateDto);
             JobDto jobDto = new JobDto(job);
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
@@ -234,7 +234,7 @@ public class AdminJobManagementController {
     public ResponseEntity<Map<String, Object>> deleteJob(@PathVariable Long jobId) {
         log.info("Admin deleting job: {}", jobId);
         try {
-            jobService.deleteJob(jobId);
+            jobService.deleteJobAsAdmin(jobId);
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
             response.put("message", "Job deleted successfully");

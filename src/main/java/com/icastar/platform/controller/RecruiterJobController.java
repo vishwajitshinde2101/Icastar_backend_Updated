@@ -4,6 +4,7 @@ import com.icastar.platform.dto.job.CreateJobDto;
 import com.icastar.platform.dto.job.BulkUploadResult;
 import com.icastar.platform.dto.job.JobDto;
 import com.icastar.platform.dto.job.UpdateJobDto;
+import com.icastar.platform.dto.job.UpdateJobStatusDto;
 import com.icastar.platform.entity.Job;
 import com.icastar.platform.entity.User;
 import com.icastar.platform.service.JobService;
@@ -144,7 +145,7 @@ public class RecruiterJobController {
 
             log.info("Updating job {} for recruiter: {}", jobId, email);
 
-            Job job = jobService.updateJob(jobId, updateDto);
+            Job job = jobService.updateJob(jobId, recruiter.getId(), updateDto);
             JobDto jobDto = new JobDto(job);
 
             return ResponseEntity.ok(jobDto);
@@ -169,7 +170,7 @@ public class RecruiterJobController {
 
             log.info("Deleting job {} for recruiter: {}", jobId, email);
 
-            jobService.deleteJob(jobId);
+            jobService.deleteJob(jobId, recruiter.getId());
 
             Map<String, String> response = new HashMap<>();
             response.put("message", "Job deleted successfully");
@@ -186,7 +187,7 @@ public class RecruiterJobController {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             String email = authentication.getName();
-            
+
             User recruiter = userService.findByEmail(email)
                     .orElseThrow(() -> new RuntimeException("User not found"));
 
@@ -203,6 +204,55 @@ public class RecruiterJobController {
         } catch (Exception e) {
             log.error("Error toggling job visibility", e);
             throw new RuntimeException("Failed to toggle job visibility: " + e.getMessage());
+        }
+    }
+
+    @PostMapping("/{jobId}/status")
+    public ResponseEntity<Map<String, Object>> updateJobStatus(
+            @PathVariable Long jobId,
+            @Valid @RequestBody UpdateJobStatusDto updateStatusDto) {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String email = authentication.getName();
+
+            User recruiter = userService.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            if (recruiter.getRole() != User.UserRole.RECRUITER) {
+                throw new RuntimeException("Only recruiters can update job status");
+            }
+
+            log.info("Updating status for job {} to {} by recruiter: {}",
+                    jobId, updateStatusDto.getStatus(), email);
+
+            Job job = jobService.updateJobStatus(
+                    jobId,
+                    recruiter.getId(),
+                    updateStatusDto.getStatus(),
+                    updateStatusDto.getReason()
+            );
+
+            JobDto jobDto = new JobDto(job);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Job status updated successfully");
+            response.put("data", jobDto);
+
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            log.error("Error updating job status", e);
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        } catch (Exception e) {
+            log.error("Error updating job status", e);
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "Failed to update job status");
+            response.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
         }
     }
 

@@ -61,7 +61,10 @@ public class ArtistSuggestionDto {
     private String verificationStatus;
     private Boolean isVerified;
     private Boolean isPremium;
-    
+
+    // Profile Completeness
+    private Integer profileCompletionPercentage; // 0-100
+
     // Quick Actions
     private Boolean canViewProfile;
     private Boolean canContact;

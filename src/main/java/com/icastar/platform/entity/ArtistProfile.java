@@ -115,6 +115,15 @@ public class ArtistProfile extends BaseEntity {
     @Column(name = "hourly_rate")
     private Double hourlyRate;
 
+    @Column(name = "photo_url")
+    private String photoUrl; // S3 URL for artist's portfolio photo
+
+    @Column(name = "video_url")
+    private String videoUrl; // S3 URL for artist's portfolio video
+
+    @Column(name = "profile_url")
+    private String profileUrl; // S3 URL for artist's profile image
+
     @Column(name = "is_verified_badge", nullable = false)
     private Boolean isVerifiedBadge = false;
 

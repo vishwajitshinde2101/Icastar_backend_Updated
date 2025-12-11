@@ -35,6 +35,8 @@ public class RecruiterDashboardService {
     private final ArtistProfileRepository artistProfileRepository;
     private final SubscriptionRepository subscriptionRepository;
     private final UsageTrackingRepository usageTrackingRepository;
+    private final EmailService emailService;
+    private final ArtistService artistService;
 
 
 
@@ -531,11 +533,14 @@ public class RecruiterDashboardService {
     }
     
     private ArtistSuggestionDto convertToArtistSuggestionDto(ArtistProfile artistProfile) {
+        // Calculate profile completion percentage
+        int completionPercentage = artistService.calculateProfileCompletionPercentage(artistProfile);
+
         return ArtistSuggestionDto.builder()
                 .artistId(artistProfile.getId())
                 .artistName(artistProfile.getUser().getEmail()) // Placeholder
                 .artistEmail(artistProfile.getUser().getEmail())
-                .artistCategory(artistProfile.getArtistType() != null ? 
+                .artistCategory(artistProfile.getArtistType() != null ?
                         artistProfile.getArtistType().getDisplayName() : "Unknown")
                 .artistType("Unknown") // Placeholder
                 .location("N/A") // Placeholder
@@ -569,6 +574,7 @@ public class RecruiterDashboardService {
                 .verificationStatus("UNVERIFIED") // Placeholder
                 .isVerified(false)
                 .isPremium(false)
+                .profileCompletionPercentage(completionPercentage) // Profile completion percentage
                 .canViewProfile(true)
                 .canContact(true)
                 .canShortlist(true)
@@ -845,6 +851,415 @@ public class RecruiterDashboardService {
         } catch (Exception e) {
             log.error("Error creating job: {}", e.getMessage());
             throw new RuntimeException("Failed to create job: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Get all applicants for a specific job
+     */
+    @Transactional(readOnly = true)
+    public Map<String, Object> getApplicantsByJobId(User recruiter, Long jobId, String status,
+                                                     Boolean isShortlisted, Integer minExperience,
+                                                     Integer maxExperience, Pageable pageable) {
+        try {
+            // Verify job exists and belongs to recruiter
+            Job job = jobRepository.findById(jobId)
+                    .orElseThrow(() -> new RuntimeException("Job not found"));
+
+            if (!job.getRecruiter().getId().equals(recruiter.getId())) {
+                throw new RuntimeException("Unauthorized: This job does not belong to you");
+            }
+
+            // Get all applications for this job
+            Page<JobApplication> applications;
+
+            if (status != null) {
+                // Filter by status
+                JobApplication.ApplicationStatus appStatus = JobApplication.ApplicationStatus.valueOf(status.toUpperCase());
+                applications = jobApplicationRepository.findByJobAndStatus(job, appStatus, pageable);
+            } else {
+                // Get all applications
+                applications = jobApplicationRepository.findByJob(job, pageable);
+            }
+
+            // Convert to detailed applicant DTOs with filtering
+            List<Map<String, Object>> applicants = applications.getContent().stream()
+                    .filter(app -> {
+                        // Filter by shortlisted status if specified
+                        if (isShortlisted != null && !app.getIsShortlisted().equals(isShortlisted)) {
+                            return false;
+                        }
+                        // Filter by experience if specified
+                        if (minExperience != null || maxExperience != null) {
+                            Integer experience = app.getArtist().getExperienceYears();
+                            if (experience == null) return false;
+                            if (minExperience != null && experience < minExperience) return false;
+                            if (maxExperience != null && experience > maxExperience) return false;
+                        }
+                        return true;
+                    })
+                    .map(application -> {
+                        Map<String, Object> applicant = new HashMap<>();
+                        ArtistProfile artist = application.getArtist();
+
+                        // Application details
+                        applicant.put("applicationId", application.getId());
+                        applicant.put("status", application.getStatus().name());
+                        applicant.put("appliedAt", application.getAppliedAt());
+                        applicant.put("reviewedAt", application.getReviewedAt());
+
+                        // Artist basic info
+                        applicant.put("artistId", artist.getId());
+                        applicant.put("firstName", artist.getFirstName());
+                        applicant.put("lastName", artist.getLastName());
+                        applicant.put("fullName", artist.getFirstName() + " " + artist.getLastName());
+                        applicant.put("stageName", artist.getStageName());
+                        applicant.put("email", artist.getUser().getEmail());
+                        applicant.put("phone", artist.getUser().getMobile());
+
+                        // Artist profile details
+                        applicant.put("artistType", artist.getArtistType() != null ? artist.getArtistType().getName() : null);
+                        applicant.put("location", artist.getLocation());
+                        applicant.put("bio", artist.getBio());
+                        applicant.put("experienceYears", artist.getExperienceYears());
+                        applicant.put("skills", artist.getSkills());
+                        applicant.put("languagesSpoken", artist.getLanguagesSpoken());
+                        applicant.put("hourlyRate", artist.getHourlyRate());
+                        applicant.put("isVerified", artist.getIsVerifiedBadge());
+
+                        // Application specific details
+                        applicant.put("coverLetter", application.getCoverLetter());
+                        applicant.put("expectedSalary", application.getExpectedSalary());
+                        applicant.put("availabilityDate", application.getAvailabilityDate());
+                        applicant.put("portfolioUrl", application.getPortfolioUrl());
+                        applicant.put("resumeUrl", application.getResumeUrl());
+                        applicant.put("demoReelUrl", application.getDemoReelUrl());
+
+                        // Application status flags
+                        applicant.put("isShortlisted", application.getIsShortlisted());
+                        applicant.put("isHired", application.getIsHired());
+                        applicant.put("rating", application.getRating());
+                        applicant.put("feedback", application.getFeedback());
+                        applicant.put("interviewScheduledAt", application.getInterviewScheduledAt());
+                        applicant.put("interviewNotes", application.getInterviewNotes());
+                        applicant.put("rejectionReason", application.getRejectionReason());
+
+                        return applicant;
+                    })
+                    .collect(Collectors.toList());
+
+            // Job details
+            Map<String, Object> jobDetails = new HashMap<>();
+            jobDetails.put("jobId", job.getId());
+            jobDetails.put("jobTitle", job.getTitle());
+            jobDetails.put("jobStatus", job.getStatus().name());
+            jobDetails.put("totalApplications", jobApplicationRepository.countByJob(job));
+
+            // Prepare response
+            Map<String, Object> result = new HashMap<>();
+            result.put("job", jobDetails);
+            result.put("applicants", applicants);
+            result.put("totalElements", applications.getTotalElements());
+            result.put("totalPages", applications.getTotalPages());
+            result.put("currentPage", applications.getNumber());
+            result.put("size", applications.getSize());
+
+            return result;
+        } catch (Exception e) {
+            log.error("Error getting applicants for job {}: {}", jobId, e.getMessage(), e);
+            throw new RuntimeException("Failed to get applicants: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Get all hired applicants for the recruiter
+     */
+    @Transactional(readOnly = true)
+    public Map<String, Object> getHiredApplicants(User recruiter, Long jobId, Pageable pageable) {
+        try {
+            // Get recruiter profile
+            RecruiterProfile recruiterProfile = recruiterProfileRepository.findByUserId(recruiter.getId())
+                    .orElseThrow(() -> new RuntimeException(ApplicationConstants.ErrorMessages.RECRUITER_PROFILE_NOT_FOUND));
+
+            // Get all jobs by this recruiter
+            List<Job> recruiterJobs;
+            if (jobId != null) {
+                // Filter by specific job
+                Job job = jobRepository.findById(jobId)
+                        .orElseThrow(() -> new RuntimeException("Job not found"));
+                if (!job.getRecruiter().getId().equals(recruiter.getId())) {
+                    throw new RuntimeException("Unauthorized access to job");
+                }
+                recruiterJobs = List.of(job);
+            } else {
+                // Get all jobs by recruiter
+                recruiterJobs = jobRepository.findByRecruiterId(recruiter.getId());
+            }
+
+            // Get job IDs
+            List<Long> jobIds = recruiterJobs.stream()
+                    .map(Job::getId)
+                    .collect(Collectors.toList());
+
+            if (jobIds.isEmpty()) {
+                // No jobs, return empty result
+                Map<String, Object> result = new HashMap<>();
+                result.put("hires", new ArrayList<>());
+                result.put("totalElements", 0);
+                result.put("totalPages", 0);
+                result.put("currentPage", 0);
+                result.put("size", 0);
+                return result;
+            }
+
+            // Get hired applications
+            Page<JobApplication> hiredApplications = jobApplicationRepository.findByJobIdInAndIsHired(
+                    jobIds, true, pageable);
+
+            // Convert to DTOs
+            List<Map<String, Object>> hires = hiredApplications.getContent().stream()
+                    .map(application -> {
+                        Map<String, Object> hire = new HashMap<>();
+                        hire.put("id", application.getId());
+                        hire.put("jobId", application.getJob().getId());
+                        hire.put("jobTitle", application.getJob().getTitle());
+                        hire.put("artistId", application.getArtist().getId());
+                        hire.put("artistName", application.getArtist().getFirstName() + " " + application.getArtist().getLastName());
+                        hire.put("artistEmail", application.getArtist().getUser().getEmail());
+                        hire.put("status", application.getStatus());
+                        hire.put("hiredAt", application.getHiredAt());
+                        hire.put("expectedSalary", application.getExpectedSalary());
+                        hire.put("rating", application.getRating());
+                        hire.put("feedback", application.getFeedback());
+                        return hire;
+                    })
+                    .collect(Collectors.toList());
+
+            // Prepare response
+            Map<String, Object> result = new HashMap<>();
+            result.put("hires", hires);
+            result.put("totalElements", hiredApplications.getTotalElements());
+            result.put("totalPages", hiredApplications.getTotalPages());
+            result.put("currentPage", hiredApplications.getNumber());
+            result.put("size", hiredApplications.getSize());
+
+            return result;
+        } catch (Exception e) {
+            log.error("Error getting hired applicants: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to get hired applicants: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Schedule interview for an applicant
+     */
+    @Transactional
+    public Map<String, Object> scheduleInterview(User recruiter, Long applicationId,
+                                                   String interviewDateTime, String interviewType,
+                                                   String interviewLocation, String meetingLink,
+                                                   String notes) {
+        try {
+            // Get the application
+            JobApplication application = jobApplicationRepository.findById(applicationId)
+                    .orElseThrow(() -> new RuntimeException("Application not found"));
+
+            // Verify the job belongs to this recruiter
+            if (!application.getJob().getRecruiter().getId().equals(recruiter.getId())) {
+                throw new RuntimeException("Unauthorized: This application does not belong to your job");
+            }
+
+            // Parse the interview date time
+            LocalDateTime interviewScheduledAt = LocalDateTime.parse(interviewDateTime);
+
+            // Update application with interview details
+            application.setStatus(JobApplication.ApplicationStatus.INTERVIEW_SCHEDULED);
+            application.setInterviewScheduledAt(interviewScheduledAt);
+            application.setInterviewNotes(notes);
+            application.setUpdatedAt(LocalDateTime.now());
+
+            // Save the application
+            jobApplicationRepository.save(application);
+
+            // Get artist and job details for email
+            ArtistProfile artist = application.getArtist();
+            Job job = application.getJob();
+            RecruiterProfile recruiterProfile = recruiterProfileRepository.findByUserId(recruiter.getId())
+                    .orElseThrow(() -> new RuntimeException("Recruiter profile not found"));
+
+            // Send email notification to applicant
+            sendInterviewEmail(
+                    artist.getUser().getEmail(),
+                    artist.getFirstName() + " " + artist.getLastName(),
+                    job.getTitle(),
+                    recruiterProfile.getCompanyName(),
+                    recruiterProfile.getContactPersonName(),
+                    interviewScheduledAt,
+                    interviewType,
+                    interviewLocation,
+                    meetingLink,
+                    notes
+            );
+
+            // Prepare response
+            Map<String, Object> result = new HashMap<>();
+            result.put("applicationId", application.getId());
+            result.put("artistName", artist.getFirstName() + " " + artist.getLastName());
+            result.put("artistEmail", artist.getUser().getEmail());
+            result.put("jobTitle", job.getTitle());
+            result.put("interviewScheduledAt", interviewScheduledAt);
+            result.put("interviewType", interviewType);
+            result.put("interviewLocation", interviewLocation);
+            result.put("meetingLink", meetingLink);
+            result.put("status", application.getStatus().name());
+            result.put("emailSent", true);
+
+            log.info("Interview scheduled successfully for application ID: {} at {}", applicationId, interviewScheduledAt);
+
+            return result;
+        } catch (Exception e) {
+            log.error("Error scheduling interview: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to schedule interview: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Submit interview result (HIRED or REJECTED)
+     */
+    @Transactional
+    public Map<String, Object> submitInterviewResult(User recruiter, InterviewResultDto resultDto) {
+        try {
+            // Get the application
+            JobApplication application = jobApplicationRepository.findById(resultDto.getApplicationId())
+                    .orElseThrow(() -> new RuntimeException("Application not found"));
+
+            // Verify the job belongs to this recruiter
+            if (!application.getJob().getRecruiter().getId().equals(recruiter.getId())) {
+                throw new RuntimeException("Unauthorized: This application does not belong to your job");
+            }
+
+            // Validate that interview was already scheduled
+            if (application.getStatus() != JobApplication.ApplicationStatus.INTERVIEW_SCHEDULED &&
+                application.getStatus() != JobApplication.ApplicationStatus.INTERVIEWED) {
+                throw new RuntimeException("Interview must be scheduled before submitting result. Current status: " + application.getStatus());
+            }
+
+            // Get artist and job details
+            ArtistProfile artist = application.getArtist();
+            Job job = application.getJob();
+            RecruiterProfile recruiterProfile = recruiterProfileRepository.findByUserId(recruiter.getId())
+                    .orElseThrow(() -> new RuntimeException("Recruiter profile not found"));
+
+            // Update application based on result
+            LocalDateTime now = LocalDateTime.now();
+            if (resultDto.getResult() == InterviewResultDto.InterviewResult.HIRED) {
+                application.setStatus(JobApplication.ApplicationStatus.HIRED);
+                application.setIsHired(true);
+                application.setHiredAt(now);
+
+                // Update recruiter's successful hires count
+                recruiterProfile.setSuccessfulHires(
+                    (recruiterProfile.getSuccessfulHires() != null ? recruiterProfile.getSuccessfulHires() : 0) + 1
+                );
+                recruiterProfileRepository.save(recruiterProfile);
+
+                log.info("Applicant HIRED - Application ID: {}, Artist: {}, Job: {}",
+                    application.getId(), artist.getFirstName() + " " + artist.getLastName(), job.getTitle());
+            } else {
+                application.setStatus(JobApplication.ApplicationStatus.REJECTED);
+                application.setRejectionReason(resultDto.getNotes());
+
+                log.info("Applicant REJECTED - Application ID: {}, Artist: {}, Job: {}",
+                    application.getId(), artist.getFirstName() + " " + artist.getLastName(), job.getTitle());
+            }
+
+            // Save notes if provided
+            if (resultDto.getNotes() != null && !resultDto.getNotes().isEmpty()) {
+                application.setFeedback(resultDto.getNotes());
+            }
+
+            application.setReviewedAt(now);
+            application.setUpdatedAt(now);
+
+            // Save the application
+            JobApplication savedApplication = jobApplicationRepository.save(application);
+
+            // Send email notification to applicant
+            sendInterviewResultEmail(
+                    artist.getUser().getEmail(),
+                    artist.getFirstName() + " " + artist.getLastName(),
+                    job.getTitle(),
+                    recruiterProfile.getCompanyName(),
+                    resultDto.getResult(),
+                    resultDto.getNotes()
+            );
+
+            // Prepare response
+            Map<String, Object> result = new HashMap<>();
+            result.put("applicationId", savedApplication.getId());
+            result.put("artistId", artist.getId());
+            result.put("artistName", artist.getFirstName() + " " + artist.getLastName());
+            result.put("artistEmail", artist.getUser().getEmail());
+            result.put("jobId", job.getId());
+            result.put("jobTitle", job.getTitle());
+            result.put("result", resultDto.getResult().name());
+            result.put("status", savedApplication.getStatus().name());
+            result.put("notes", resultDto.getNotes());
+            result.put("reviewedAt", savedApplication.getReviewedAt());
+            result.put("isHired", savedApplication.getIsHired());
+            result.put("hiredAt", savedApplication.getHiredAt());
+            result.put("emailSent", true);
+
+            return result;
+        } catch (Exception e) {
+            log.error("Error submitting interview result: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to submit interview result: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Send interview result email to applicant
+     */
+    private void sendInterviewResultEmail(String toEmail, String applicantName, String jobTitle,
+                                           String companyName, InterviewResultDto.InterviewResult result,
+                                           String notes) {
+        try {
+            if (result == InterviewResultDto.InterviewResult.HIRED) {
+                emailService.sendHiredEmail(toEmail, applicantName, jobTitle, companyName, notes);
+            } else {
+                emailService.sendRejectionEmail(toEmail, applicantName, jobTitle, companyName, notes);
+            }
+            log.info("Interview result email sent successfully to: {}", toEmail);
+        } catch (Exception e) {
+            log.error("Error sending interview result email: {}", e.getMessage(), e);
+            // Don't throw exception - result is already recorded
+        }
+    }
+
+    /**
+     * Send interview scheduled email to applicant
+     */
+    private void sendInterviewEmail(String toEmail, String applicantName, String jobTitle,
+                                     String companyName, String recruiterName,
+                                     LocalDateTime interviewDateTime, String interviewType,
+                                     String interviewLocation, String meetingLink, String notes) {
+        try {
+            // Use EmailService to send interview schedule email
+            emailService.sendInterviewScheduleEmail(
+                    toEmail,
+                    applicantName,
+                    jobTitle,
+                    companyName,
+                    recruiterName,
+                    interviewDateTime,
+                    interviewType,
+                    interviewLocation,
+                    meetingLink,
+                    notes
+            );
+            log.info("Interview email sent successfully to: {}", toEmail);
+        } catch (Exception e) {
+            log.error("Error sending interview email: {}", e.getMessage(), e);
+            // Don't throw exception - interview is already scheduled
         }
     }
 }

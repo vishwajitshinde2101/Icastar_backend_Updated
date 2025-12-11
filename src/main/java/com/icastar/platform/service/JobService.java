@@ -223,11 +223,126 @@ public class JobService {
         return jobRepository.save(job);
     }
 
-    public Job updateJob(Long jobId, UpdateJobDto updateJobDto) {
+    public Job updateJob(Long jobId, Long recruiterId, UpdateJobDto updateJobDto) {
         Job job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new RuntimeException(ApplicationConstants.ErrorMessages.JOB_NOT_FOUND));
 
-        // Only update fields that are not null
+        // Verify ownership - only the recruiter who created the job can update it
+        if (!job.getRecruiter().getId().equals(recruiterId)) {
+            throw new RuntimeException("You don't have permission to update this job");
+        }
+
+        // Track if any field was actually updated
+        boolean isUpdated = false;
+
+        // Only update fields that are not null and different from current value
+        if (updateJobDto.getTitle() != null && !updateJobDto.getTitle().equals(job.getTitle())) {
+            job.setTitle(updateJobDto.getTitle());
+            isUpdated = true;
+        }
+        if (updateJobDto.getDescription() != null && !updateJobDto.getDescription().equals(job.getDescription())) {
+            job.setDescription(updateJobDto.getDescription());
+            isUpdated = true;
+        }
+        if (updateJobDto.getRequirements() != null && !updateJobDto.getRequirements().equals(job.getRequirements())) {
+            job.setRequirements(updateJobDto.getRequirements());
+            isUpdated = true;
+        }
+        if (updateJobDto.getLocation() != null && !updateJobDto.getLocation().equals(job.getLocation())) {
+            job.setLocation(updateJobDto.getLocation());
+            isUpdated = true;
+        }
+        if (updateJobDto.getJobType() != null && !updateJobDto.getJobType().equals(job.getJobType())) {
+            job.setJobType(updateJobDto.getJobType());
+            isUpdated = true;
+        }
+        if (updateJobDto.getExperienceLevel() != null && !updateJobDto.getExperienceLevel().equals(job.getExperienceLevel())) {
+            job.setExperienceLevel(updateJobDto.getExperienceLevel());
+            isUpdated = true;
+        }
+        if (updateJobDto.getBudgetMin() != null && !updateJobDto.getBudgetMin().equals(job.getBudgetMin())) {
+            job.setBudgetMin(updateJobDto.getBudgetMin());
+            isUpdated = true;
+        }
+        if (updateJobDto.getBudgetMax() != null && !updateJobDto.getBudgetMax().equals(job.getBudgetMax())) {
+            job.setBudgetMax(updateJobDto.getBudgetMax());
+            isUpdated = true;
+        }
+        if (updateJobDto.getCurrency() != null && !updateJobDto.getCurrency().equals(job.getCurrency())) {
+            job.setCurrency(updateJobDto.getCurrency());
+            isUpdated = true;
+        }
+        if (updateJobDto.getDurationDays() != null && !updateJobDto.getDurationDays().equals(job.getDurationDays())) {
+            job.setDurationDays(updateJobDto.getDurationDays());
+            isUpdated = true;
+        }
+        if (updateJobDto.getStartDate() != null && !updateJobDto.getStartDate().equals(job.getStartDate())) {
+            job.setStartDate(updateJobDto.getStartDate());
+            isUpdated = true;
+        }
+        if (updateJobDto.getEndDate() != null && !updateJobDto.getEndDate().equals(job.getEndDate())) {
+            job.setEndDate(updateJobDto.getEndDate());
+            isUpdated = true;
+        }
+        if (updateJobDto.getApplicationDeadline() != null && !updateJobDto.getApplicationDeadline().equals(job.getApplicationDeadline())) {
+            job.setApplicationDeadline(updateJobDto.getApplicationDeadline());
+            isUpdated = true;
+        }
+        if (updateJobDto.getIsRemote() != null && !updateJobDto.getIsRemote().equals(job.getIsRemote())) {
+            job.setIsRemote(updateJobDto.getIsRemote());
+            isUpdated = true;
+        }
+        if (updateJobDto.getIsUrgent() != null && !updateJobDto.getIsUrgent().equals(job.getIsUrgent())) {
+            job.setIsUrgent(updateJobDto.getIsUrgent());
+            isUpdated = true;
+        }
+        if (updateJobDto.getIsFeatured() != null && !updateJobDto.getIsFeatured().equals(job.getIsFeatured())) {
+            job.setIsFeatured(updateJobDto.getIsFeatured());
+            isUpdated = true;
+        }
+        if (updateJobDto.getContactEmail() != null && !updateJobDto.getContactEmail().equals(job.getContactEmail())) {
+            job.setContactEmail(updateJobDto.getContactEmail());
+            isUpdated = true;
+        }
+        if (updateJobDto.getContactPhone() != null && !updateJobDto.getContactPhone().equals(job.getContactPhone())) {
+            job.setContactPhone(updateJobDto.getContactPhone());
+            isUpdated = true;
+        }
+        if (updateJobDto.getBenefits() != null && !updateJobDto.getBenefits().equals(job.getBenefits())) {
+            job.setBenefits(updateJobDto.getBenefits());
+            isUpdated = true;
+        }
+        if (updateJobDto.getStatus() != null && !updateJobDto.getStatus().equals(job.getStatus())) {
+            job.setStatus(updateJobDto.getStatus());
+            isUpdated = true;
+        }
+
+        // Update JSON fields if provided
+        if (updateJobDto.getTags() != null && !updateJobDto.getTags().equals(job.getTags())) {
+            job.setTags(updateJobDto.getTags());
+            isUpdated = true;
+        }
+        if (updateJobDto.getSkillsRequired() != null && !updateJobDto.getSkillsRequired().equals(job.getSkillsRequired())) {
+            job.setSkillsRequired(updateJobDto.getSkillsRequired());
+            isUpdated = true;
+        }
+
+        // Only update audit field if record was actually modified
+        if (isUpdated) {
+            job.setUpdatedAt(LocalDateTime.now());
+        }
+
+        return jobRepository.save(job);
+    }
+
+    /**
+     * Admin-only method to update any job without ownership validation
+     */
+    public Job updateJobAsAdmin(Long jobId, UpdateJobDto updateJobDto) {
+        Job job = jobRepository.findById(jobId)
+                .orElseThrow(() -> new RuntimeException(ApplicationConstants.ErrorMessages.JOB_NOT_FOUND));
+
+        // Admin can update any job - no ownership check
         if (updateJobDto.getTitle() != null) {
             job.setTitle(updateJobDto.getTitle());
         }
@@ -288,8 +403,6 @@ public class JobService {
         if (updateJobDto.getStatus() != null) {
             job.setStatus(updateJobDto.getStatus());
         }
-
-        // Update JSON fields if provided
         if (updateJobDto.getTags() != null) {
             job.setTags(updateJobDto.getTags());
         }
@@ -298,6 +411,18 @@ public class JobService {
         }
 
         return jobRepository.save(job);
+    }
+
+    /**
+     * Admin-only method to delete any job without ownership validation
+     */
+    public void deleteJobAsAdmin(Long jobId) {
+        Job job = jobRepository.findById(jobId)
+                .orElseThrow(() -> new RuntimeException(ApplicationConstants.ErrorMessages.JOB_NOT_FOUND));
+
+        job.setStatus(Job.JobStatus.CANCELLED);
+        job.setClosedAt(LocalDateTime.now());
+        jobRepository.save(job);
     }
 
     public Job updateJobStatus(Long jobId, Job.JobStatus status) {
@@ -312,9 +437,120 @@ public class JobService {
         return jobRepository.save(job);
     }
 
-    public void deleteJob(Long jobId) {
+    /**
+     * Update job status with recruiter ownership validation and audit logging
+     * @param jobId Job ID
+     * @param recruiterId Recruiter ID (for ownership validation)
+     * @param status New status
+     * @param reason Optional reason for status change
+     * @return Updated job
+     */
+    public Job updateJobStatus(Long jobId, Long recruiterId, Job.JobStatus status, String reason) {
+        log.info("Attempting to update job {} status to {} by recruiter {}", jobId, status, recruiterId);
+
+        // Validate inputs
+        if (jobId == null) {
+            throw new RuntimeException("Job ID cannot be null");
+        }
+        if (recruiterId == null) {
+            throw new RuntimeException("Recruiter ID cannot be null");
+        }
+        if (status == null) {
+            throw new RuntimeException("Status cannot be null");
+        }
+
         Job job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new RuntimeException(ApplicationConstants.ErrorMessages.JOB_NOT_FOUND));
+
+        // Verify recruiter exists and is not null
+        if (job.getRecruiter() == null) {
+            log.error("Job {} has no recruiter assigned", jobId);
+            throw new RuntimeException("Job has no recruiter assigned");
+        }
+
+        // Verify ownership
+        if (!job.getRecruiter().getId().equals(recruiterId)) {
+            log.warn("Recruiter {} attempted to update status of job {} owned by recruiter {}",
+                    recruiterId, jobId, job.getRecruiter().getId());
+            throw new RuntimeException("You don't have permission to update this job");
+        }
+
+        Job.JobStatus oldStatus = job.getStatus();
+        log.info("Current job status: {}, requested status: {}", oldStatus, status);
+
+        // Validate status transition
+        validateStatusTransition(oldStatus, status);
+
+        // Update status
+        job.setStatus(status);
+
+        // Set timestamps based on status
+        if (status == Job.JobStatus.ACTIVE && oldStatus == Job.JobStatus.DRAFT) {
+            job.setPublishedAt(LocalDateTime.now());
+            log.info("Setting publishedAt timestamp for job {}", jobId);
+        }
+
+        if (status == Job.JobStatus.CLOSED) {
+            job.setClosedAt(LocalDateTime.now());
+            log.info("Setting closedAt timestamp for job {}", jobId);
+        }
+
+        Job updatedJob = jobRepository.save(job);
+
+        // Log status change
+        log.info("Job {} status changed from {} to {} by recruiter {}. Reason: {}",
+                jobId, oldStatus, status, recruiterId, reason != null ? reason : "Not specified");
+
+        return updatedJob;
+    }
+
+    /**
+     * Validate job status transition
+     */
+    private void validateStatusTransition(Job.JobStatus from, Job.JobStatus to) {
+        if (from == null || to == null) {
+            throw new RuntimeException("Status cannot be null");
+        }
+
+        boolean isValidTransition = false;
+
+        switch (from) {
+            case DRAFT:
+                isValidTransition = (to == Job.JobStatus.ACTIVE || to == Job.JobStatus.CANCELLED);
+                break;
+            case ACTIVE:
+                isValidTransition = (to == Job.JobStatus.PAUSED || to == Job.JobStatus.CLOSED || to == Job.JobStatus.CANCELLED);
+                break;
+            case PAUSED:
+                isValidTransition = (to == Job.JobStatus.ACTIVE || to == Job.JobStatus.CLOSED || to == Job.JobStatus.CANCELLED);
+                break;
+            case CLOSED:
+                isValidTransition = (to == Job.JobStatus.ACTIVE); // Allow reopening
+                break;
+            case CANCELLED:
+                isValidTransition = false; // Cannot transition from cancelled
+                break;
+            case DELETED:
+                isValidTransition = false; // Cannot transition from deleted
+                break;
+            default:
+                isValidTransition = false;
+                break;
+        }
+
+        if (!isValidTransition) {
+            throw new RuntimeException(String.format("Invalid status transition from %s to %s", from, to));
+        }
+    }
+
+    public void deleteJob(Long jobId, Long recruiterId) {
+        Job job = jobRepository.findById(jobId)
+                .orElseThrow(() -> new RuntimeException(ApplicationConstants.ErrorMessages.JOB_NOT_FOUND));
+
+        // Verify ownership - only the recruiter who created the job can delete it
+        if (!job.getRecruiter().getId().equals(recruiterId)) {
+            throw new RuntimeException("You don't have permission to delete this job");
+        }
 
         job.setStatus(Job.JobStatus.CANCELLED);
         job.setClosedAt(LocalDateTime.now());
@@ -349,6 +585,12 @@ public class JobService {
 
     public Job toggleJobVisibility(Long jobId, Long recruiterId) {
         Job job = findById(jobId).orElseThrow(() -> new RuntimeException("Job not found"));
+
+        // Verify ownership - only the recruiter who created the job can toggle visibility
+        if (!job.getRecruiter().getId().equals(recruiterId)) {
+            throw new RuntimeException("You don't have permission to modify this job");
+        }
+
         job.setStatus(job.getStatus() == Job.JobStatus.ACTIVE ? Job.JobStatus.CLOSED : Job.JobStatus.ACTIVE);
         return jobRepository.save(job);
     }

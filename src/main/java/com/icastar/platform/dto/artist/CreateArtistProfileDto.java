@@ -42,7 +42,12 @@ public class CreateArtistProfileDto {
     private Integer experienceYears;
     
     private Double hourlyRate;
-    
+
+    // Portfolio URLs (S3)
+    private String photoUrl; // S3 URL for artist's portfolio photo
+    private String videoUrl; // S3 URL for artist's portfolio video
+    private String profileUrl; // S3 URL for artist's profile image
+
     private List<ArtistProfileFieldDto> dynamicFields;
     
     // Actor-specific fields

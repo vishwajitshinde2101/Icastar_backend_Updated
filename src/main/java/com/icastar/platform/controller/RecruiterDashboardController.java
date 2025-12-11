@@ -321,18 +321,184 @@ public class RecruiterDashboardController {
         try {
             User recruiter = (User) authentication.getPrincipal();
             Map<String, Object> result = recruiterDashboardService.boostJob(jobId, days, recruiter);
-            
+
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
             response.put("message", "Job boosted successfully");
             response.put("data", result);
-            
+
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             log.error("Error boosting job: {}", e.getMessage());
             Map<String, Object> response = new HashMap<>();
             response.put("success", false);
             response.put("message", "Failed to boost job: " + e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    /**
+     * Get all hired applicants
+     */
+    @GetMapping("/hires")
+    public ResponseEntity<Map<String, Object>> getHires(
+            @RequestParam(required = false) Long jobId,
+            @PageableDefault(size = 20, sort = "hiredAt", direction = Sort.Direction.DESC) Pageable pageable,
+            Authentication authentication) {
+        try {
+            String email = authentication.getName();
+            User user = userService.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            log.info("Fetching hired applicants for recruiter: {}", email);
+            Map<String, Object> hires = recruiterDashboardService.getHiredApplicants(user, jobId, pageable);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("data", hires);
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Error getting hired applicants: {}", e.getMessage(), e);
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "Failed to get hired applicants: " + e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    /**
+     * View all applicants for a specific job
+     * GET /recruiter/dashboard/view-applicants/{jobId}
+     */
+    @GetMapping("/view-applicants/{jobId}")
+    public ResponseEntity<Map<String, Object>> viewApplicantsByJobId(
+            @PathVariable Long jobId,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) Boolean isShortlisted,
+            @RequestParam(required = false) Integer minExperience,
+            @RequestParam(required = false) Integer maxExperience,
+            @PageableDefault(size = 20, sort = "appliedAt", direction = Sort.Direction.DESC) Pageable pageable,
+            Authentication authentication) {
+        try {
+            String email = authentication.getName();
+            User user = userService.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            log.info("Fetching applicants for job ID: {} by recruiter: {}", jobId, email);
+
+            // Verify the job belongs to this recruiter
+            Map<String, Object> applicants = recruiterDashboardService.getApplicantsByJobId(
+                    user, jobId, status, isShortlisted, minExperience, maxExperience, pageable);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("data", applicants);
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Error getting applicants for job {}: {}", jobId, e.getMessage(), e);
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "Failed to get applicants: " + e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    /**
+     * Submit interview result (HIRED or REJECTED)
+     * POST /recruiter/dashboard/interview-result
+     */
+    @PostMapping("/interview-result")
+    public ResponseEntity<Map<String, Object>> submitInterviewResult(
+            @Valid @RequestBody InterviewResultDto resultDto,
+            Authentication authentication) {
+        try {
+            String email = authentication.getName();
+            User user = userService.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            log.info("Submitting interview result for application ID: {} by recruiter: {}",
+                    resultDto.getApplicationId(), email);
+
+            Map<String, Object> result = recruiterDashboardService.submitInterviewResult(user, resultDto);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Interview result submitted successfully");
+            response.put("data", result);
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Error submitting interview result: {}", e.getMessage(), e);
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "Failed to submit interview result: " + e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    /**
+     * Schedule interview for an applicant
+     * POST /recruiter/dashboard/schedule-interview
+     */
+    @PostMapping("/schedule-interview")
+    public ResponseEntity<Map<String, Object>> scheduleInterview(
+            @RequestBody Map<String, Object> request,
+            Authentication authentication) {
+        try {
+            String email = authentication.getName();
+            User user = userService.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            // Validate and extract required fields
+            if (request.get("applicationId") == null) {
+                throw new RuntimeException("applicationId is required");
+            }
+            if (request.get("interviewDateTime") == null) {
+                throw new RuntimeException("interviewDateTime is required");
+            }
+            if (request.get("interviewType") == null) {
+                throw new RuntimeException("interviewType is required");
+            }
+
+            Long applicationId = Long.valueOf(request.get("applicationId").toString());
+            String interviewDateTime = request.get("interviewDateTime").toString();
+            String interviewType = request.get("interviewType").toString();
+
+            // Handle optional fields with null checks
+            String interviewLocation = "";
+            if (request.get("interviewLocation") != null) {
+                interviewLocation = request.get("interviewLocation").toString();
+            }
+
+            String meetingLink = "";
+            if (request.get("meetingLink") != null) {
+                meetingLink = request.get("meetingLink").toString();
+            }
+
+            String notes = "";
+            if (request.get("notes") != null) {
+                notes = request.get("notes").toString();
+            }
+
+            log.info("Scheduling interview for application ID: {} by recruiter: {}", applicationId, email);
+
+            Map<String, Object> result = recruiterDashboardService.scheduleInterview(
+                    user, applicationId, interviewDateTime, interviewType,
+                    interviewLocation, meetingLink, notes);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Interview scheduled successfully and email sent to applicant");
+            response.put("data", result);
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Error scheduling interview: {}", e.getMessage(), e);
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "Failed to schedule interview: " + e.getMessage());
             return ResponseEntity.badRequest().body(response);
         }
     }

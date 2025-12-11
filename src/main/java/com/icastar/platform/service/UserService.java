@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,6 +23,7 @@ import java.util.Optional;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Transactional(readOnly = true)
     public Optional<User> findById(Long id) {
@@ -290,5 +292,40 @@ public class UserService {
     public List<User> getActiveUsersByLastLogin(int days) {
         LocalDateTime cutoffDate = LocalDateTime.now().minusDays(days);
         return userRepository.findByLastLoginAfterAndStatus(cutoffDate, User.UserStatus.ACTIVE);
+    }
+
+    /**
+     * Change user password after verifying current password
+     * @param userId User ID
+     * @param currentPassword Current password
+     * @param newPassword New password
+     * @param confirmPassword Confirmation of new password
+     * @throws BusinessException if validation fails
+     */
+    public void changePassword(Long userId, String currentPassword, String newPassword, String confirmPassword) {
+        User user = findById(userId)
+                .orElseThrow(() -> new BusinessException("User not found with id: " + userId));
+
+        // Verify current password
+        if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
+            log.warn("Failed password change attempt for user {}: incorrect current password", userId);
+            throw new BusinessException("Current password is incorrect");
+        }
+
+        // Check that new password and confirm password match
+        if (!newPassword.equals(confirmPassword)) {
+            throw new BusinessException("New password and confirm password do not match");
+        }
+
+        // Check that new password is different from current password
+        if (passwordEncoder.matches(newPassword, user.getPassword())) {
+            throw new BusinessException("New password must be different from current password");
+        }
+
+        // Encode and save new password
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+
+        log.info("Password changed successfully for user {}", userId);
     }
 }

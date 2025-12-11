@@ -210,7 +210,27 @@ public class ArtistProfileService {
             if (updateDto.getHourlyRate() != null) {
                 artistProfile.setHourlyRate(updateDto.getHourlyRate());
             }
-            
+            if (updateDto.getPhotoUrl() != null) {
+                artistProfile.setPhotoUrl(updateDto.getPhotoUrl());
+            }
+            if (updateDto.getVideoUrl() != null) {
+                artistProfile.setVideoUrl(updateDto.getVideoUrl());
+            }
+            if (updateDto.getProfileUrl() != null) {
+                artistProfile.setProfileUrl(updateDto.getProfileUrl());
+            }
+
+            // Handle onboarding completion
+            if (updateDto.getIsOnboardingComplete() != null) {
+                // If frontend explicitly sends isOnboardingComplete value, use it
+                user.setIsOnboardingComplete(updateDto.getIsOnboardingComplete());
+                log.info("Onboarding status set to {} for user ID: {}", updateDto.getIsOnboardingComplete(), userId);
+            } else if (!user.getIsOnboardingComplete()) {
+                // Otherwise, automatically mark as complete on first profile update
+                user.setIsOnboardingComplete(true);
+                log.info("Onboarding automatically completed for user ID: {}", userId);
+            }
+
             // Save updates
             userRepository.save(user);
             artistProfileRepository.save(artistProfile);
@@ -262,6 +282,7 @@ public class ArtistProfileService {
         dto.setPhone(user.getMobile()); // User entity has 'mobile' field, not 'phone'
         dto.setCity(artistProfile.getLocation()); // City is stored in ArtistProfile.location
         dto.setIsActive(user.getStatus() == com.icastar.platform.entity.User.UserStatus.ACTIVE);
+        dto.setIsOnboardingComplete(user.getIsOnboardingComplete());
         dto.setCreatedAt(user.getCreatedAt());
         dto.setUpdatedAt(user.getUpdatedAt());
         
@@ -289,6 +310,9 @@ public class ArtistProfileService {
         dto.setShoeSize(artistProfile.getShoeSize());
         dto.setTravelCities(artistProfile.getTravelCities());
         dto.setHourlyRate(artistProfile.getHourlyRate());
+        dto.setPhotoUrl(artistProfile.getPhotoUrl());
+        dto.setVideoUrl(artistProfile.getVideoUrl());
+        dto.setProfileUrl(artistProfile.getProfileUrl());
         dto.setIsVerifiedBadge(artistProfile.getIsVerifiedBadge());
         dto.setVerificationRequestedAt(artistProfile.getVerificationRequestedAt());
         dto.setVerificationApprovedAt(artistProfile.getVerificationApprovedAt());

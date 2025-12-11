@@ -142,6 +142,24 @@ public class ArtistService {
         ArtistProfile profile = artistProfileRepository.findById(artistProfileId)
                 .orElseThrow(() -> new RuntimeException("Artist profile not found"));
 
+        int completionPercentage = calculateProfileCompletionPercentage(profile);
+        boolean isComplete = completionPercentage >= 80;
+
+        profile.setIsProfileComplete(isComplete);
+        artistProfileRepository.save(profile);
+        log.info("Profile completeness updated for artist {}: {}% (complete: {})", artistProfileId, completionPercentage, isComplete);
+    }
+
+    /**
+     * Calculate profile completion percentage for an artist profile
+     * @param profile Artist profile to calculate completion for
+     * @return Completion percentage (0-100)
+     */
+    public int calculateProfileCompletionPercentage(ArtistProfile profile) {
+        if (profile == null) {
+            return 0;
+        }
+
         int completedFields = 0;
         int totalFields = 11; // Total number of fields to check
 
@@ -158,12 +176,18 @@ public class ArtistService {
         if (profile.getHeight() != null) completedFields++;
         if (profile.getLanguagesSpoken() != null && !profile.getLanguagesSpoken().trim().isEmpty()) completedFields++;
 
-        int completionPercentage = totalFields > 0 ? (completedFields * 100) / totalFields : 0;
-        boolean isComplete = completionPercentage >= 80;
+        return totalFields > 0 ? (completedFields * 100) / totalFields : 0;
+    }
 
-        profile.setIsProfileComplete(isComplete);
-        artistProfileRepository.save(profile);
-        log.info("Profile completeness updated for artist {}: {}% (complete: {})", artistProfileId, completionPercentage, isComplete);
+    /**
+     * Calculate profile completion percentage by artist profile ID
+     * @param artistProfileId Artist profile ID
+     * @return Completion percentage (0-100)
+     */
+    public int calculateProfileCompletionPercentage(Long artistProfileId) {
+        ArtistProfile profile = artistProfileRepository.findById(artistProfileId)
+                .orElse(null);
+        return calculateProfileCompletionPercentage(profile);
     }
 
     public void updateBasicProfile(Long userId, UpdateUserProfileDto updateDto) {

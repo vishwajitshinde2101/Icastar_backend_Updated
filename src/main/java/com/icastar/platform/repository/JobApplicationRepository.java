@@ -73,6 +73,10 @@ public interface JobApplicationRepository extends JpaRepository<JobApplication, 
     List<JobApplication> findByIsHiredTrue();
     Page<JobApplication> findByIsHiredTrue(Pageable pageable);
 
+    // Find hired applications by job IDs
+    @Query("SELECT ja FROM JobApplication ja WHERE ja.job.id IN :jobIds AND ja.isHired = :isHired ORDER BY ja.hiredAt DESC")
+    Page<JobApplication> findByJobIdInAndIsHired(@Param("jobIds") List<Long> jobIds, @Param("isHired") Boolean isHired, Pageable pageable);
+
     // Find applications with interviews scheduled
     @Query("SELECT ja FROM JobApplication ja WHERE ja.interviewScheduledAt IS NOT NULL AND ja.interviewScheduledAt >= :currentTime ORDER BY ja.interviewScheduledAt ASC")
     List<JobApplication> findUpcomingInterviews(@Param("currentTime") LocalDateTime currentTime);

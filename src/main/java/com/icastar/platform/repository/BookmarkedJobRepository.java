@@ -67,4 +67,15 @@ public interface BookmarkedJobRepository extends JpaRepository<BookmarkedJob, Lo
 
     @Query("SELECT bj FROM BookmarkedJob bj WHERE bj.artist = :artist AND bj.job.status = 'ACTIVE' ORDER BY bj.bookmarkedAt DESC")
     Page<BookmarkedJob> findActiveBookmarksByArtist(@Param("artist") ArtistProfile artist, Pageable pageable);
+
+    // Get all bookmarked job IDs for an artist (efficient for checking bookmark status in job listings)
+    @Query("SELECT bj.job.id FROM BookmarkedJob bj WHERE bj.artist.id = :artistId")
+    List<Long> findBookmarkedJobIdsByArtistId(@Param("artistId") Long artistId);
+
+    // Check if specific jobs are bookmarked by artist (bulk check)
+    @Query("SELECT bj.job.id FROM BookmarkedJob bj WHERE bj.artist.id = :artistId AND bj.job.id IN :jobIds")
+    List<Long> findBookmarkedJobIdsByArtistIdAndJobIds(@Param("artistId") Long artistId, @Param("jobIds") List<Long> jobIds);
+
+    // Check if a specific job is bookmarked by artist ID and job ID
+    boolean existsByArtistIdAndJobId(Long artistId, Long jobId);
 }

@@ -43,7 +43,7 @@ public class CorsConfig implements WebMvcConfigurer {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        
+
         // Set allowed origins
         if (allowedOrigins != null && !allowedOrigins.isEmpty()) {
             configuration.setAllowedOrigins(allowedOrigins);
@@ -55,31 +55,44 @@ public class CorsConfig implements WebMvcConfigurer {
                 "http://localhost:3000",
                 "http://localhost:3001",
                 "http://localhost:5173",
+                "http://localhost:5174",
                 "http://127.0.0.1:3000",
                 "http://127.0.0.1:3001",
-                "http://127.0.0.1:5173"
+                "http://127.0.0.1:5173",
+                "http://127.0.0.1:5174"
             ));
         }
-        
+
         // Set allowed methods
         configuration.setAllowedMethods(Arrays.asList(allowedMethods.split(",")));
-        
+
         // Set allowed headers
         if (allowedHeaders.equals("*")) {
             configuration.addAllowedHeader("*");
         } else {
             configuration.setAllowedHeaders(Arrays.asList(allowedHeaders.split(",")));
         }
-        
+
+        // Expose headers (important for JWT tokens)
+        configuration.setExposedHeaders(Arrays.asList(
+            "Authorization",
+            "Content-Type",
+            "X-Requested-With",
+            "Accept",
+            "Origin",
+            "Access-Control-Request-Method",
+            "Access-Control-Request-Headers"
+        ));
+
         // Set credentials
         configuration.setAllowCredentials(allowCredentials);
-        
+
         // Set max age
         configuration.setMaxAge(maxAge);
-        
+
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
-        
+
         return source;
     }
 }

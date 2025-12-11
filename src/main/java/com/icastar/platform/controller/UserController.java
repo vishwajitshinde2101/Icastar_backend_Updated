@@ -1,8 +1,10 @@
 package com.icastar.platform.controller;
 
+import com.icastar.platform.dto.user.ChangePasswordDto;
 import com.icastar.platform.dto.user.UpdateUserProfileDto;
 import com.icastar.platform.dto.user.UserProfileDto;
 import com.icastar.platform.entity.User;
+import com.icastar.platform.exception.BusinessException;
 import com.icastar.platform.service.UserService;
 import com.icastar.platform.service.ArtistService;
 import com.icastar.platform.service.RecruiterService;
@@ -203,28 +205,33 @@ public class UserController {
     }
 
     @PostMapping("/change-password")
-    public ResponseEntity<Map<String, Object>> changePassword(
-            @RequestParam String currentPassword,
-            @RequestParam String newPassword) {
+    public ResponseEntity<Map<String, Object>> changePassword(@Valid @RequestBody ChangePasswordDto changePasswordDto) {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             String email = authentication.getName();
-            
+
             User user = userService.findByEmail(email)
                     .orElseThrow(() -> new RuntimeException("User not found"));
 
-            // TODO: Verify current password
-            // For now, just update the password
-            // In production, you should verify the current password first
-            
-            user.setPassword(newPassword); // This should be encoded
-            userService.save(user);
+            // Call service to change password with all validations
+            userService.changePassword(
+                user.getId(),
+                changePasswordDto.getCurrentPassword(),
+                changePasswordDto.getNewPassword(),
+                changePasswordDto.getConfirmPassword()
+            );
 
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
             response.put("message", "Password changed successfully");
 
             return ResponseEntity.ok(response);
+        } catch (BusinessException e) {
+            log.warn("Password change failed: {}", e.getMessage());
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
         } catch (Exception e) {
             log.error("Error changing password", e);
             Map<String, Object> response = new HashMap<>();

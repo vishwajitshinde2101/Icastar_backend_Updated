@@ -8,6 +8,7 @@ import com.icastar.platform.entity.User;
 import com.icastar.platform.service.ArtistService;
 import com.icastar.platform.service.ArtistTypeService;
 import com.icastar.platform.service.UserService;
+import com.icastar.platform.service.S3Service;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -24,6 +25,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.awt.print.Pageable;
 import java.util.HashMap;
@@ -43,6 +45,7 @@ public class ArtistController {
     private final ArtistService artistService;
     private final ArtistTypeService artistTypeService;
     private final UserService userService;
+    private final S3Service s3Service;
     private final ObjectMapper objectMapper;
 
     @PostMapping("/profile")
@@ -122,7 +125,7 @@ public class ArtistController {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             String email = authentication.getName();
-            
+
             User user = userService.findByEmail(email)
                     .orElseThrow(() -> new RuntimeException("User not found"));
 
@@ -137,9 +140,19 @@ public class ArtistController {
             // Get dynamic fields for the response
             List<ArtistProfileFieldDto> dynamicFields = artistService.getDynamicFields(artistProfile.getId());
 
+            // Prepare profile data with user information
+            Map<String, Object> profileData = new HashMap<>();
+            profileData.put("userId", user.getId());
+            profileData.put("email", user.getEmail());
+            profileData.put("firstName", user.getFirstName());
+            profileData.put("lastName", user.getLastName());
+            profileData.put("mobile", user.getMobile());
+            profileData.put("isOnboardingComplete", user.getIsOnboardingComplete());
+            profileData.put("artistProfile", artistProfile);
+
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
-            response.put("data", artistProfile);
+            response.put("data", profileData);
             response.put("dynamicFields", dynamicFields);
 
             return ResponseEntity.ok(response);
@@ -212,7 +225,7 @@ public class ArtistController {
             updatedProfile.setDateOfBirth(updateDto.getDateOfBirth());
             updatedProfile.setGender(updateDto.getGender());
             updatedProfile.setLocation(updateDto.getLocation());
-            // Note: Profile images and portfolio URLs are now handled by Document entity
+
             if (updateDto.getSkills() != null) {
                 try {
                     updatedProfile.setSkills(objectMapper.writeValueAsString(updateDto.getSkills()));
@@ -223,7 +236,12 @@ public class ArtistController {
             }
             updatedProfile.setExperienceYears(updateDto.getExperienceYears());
             updatedProfile.setHourlyRate(updateDto.getHourlyRate());
-            
+
+            // Handle portfolio URLs
+            updatedProfile.setPhotoUrl(updateDto.getPhotoUrl());
+            updatedProfile.setVideoUrl(updateDto.getVideoUrl());
+            updatedProfile.setProfileUrl(updateDto.getProfileUrl());
+
             // Handle other JSON fields
             if (updateDto.getLanguagesSpoken() != null) {
                 try {
@@ -379,6 +397,159 @@ public class ArtistController {
             Map<String, Object> response = new HashMap<>();
             response.put("success", false);
             response.put("message", "Failed to get verified artists");
+            response.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    @PostMapping("/profile/upload-portfolio-photo")
+    @Operation(summary = "Upload Portfolio Photo", description = "Upload artist's portfolio photo to S3")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Photo uploaded successfully"),
+        @ApiResponse(responseCode = "400", description = "Invalid file or upload failed")
+    })
+    public ResponseEntity<Map<String, Object>> uploadPortfolioPhoto(
+            @RequestParam("file") MultipartFile file) {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String email = authentication.getName();
+
+            User user = userService.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            ArtistProfile artistProfile = artistService.findByUserId(user.getId())
+                    .orElseThrow(() -> new RuntimeException("Artist profile not found"));
+
+            // Upload photo to S3
+            String photoUrl = s3Service.uploadArtistPortfolioPhoto(file, artistProfile.getId());
+
+            // Update artist profile with photo URL
+            artistProfile.setPhotoUrl(photoUrl);
+            artistService.save(artistProfile);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Portfolio photo uploaded successfully");
+            response.put("data", Map.of(
+                "photoUrl", photoUrl,
+                "fileName", file.getOriginalFilename(),
+                "fileSize", file.getSize()
+            ));
+
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            log.error("Validation error uploading portfolio photo", e);
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        } catch (Exception e) {
+            log.error("Error uploading portfolio photo", e);
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "Failed to upload portfolio photo");
+            response.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    @PostMapping("/profile/upload-portfolio-video")
+    @Operation(summary = "Upload Portfolio Video", description = "Upload artist's portfolio video to S3")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Video uploaded successfully"),
+        @ApiResponse(responseCode = "400", description = "Invalid file or upload failed")
+    })
+    public ResponseEntity<Map<String, Object>> uploadPortfolioVideo(
+            @RequestParam("file") MultipartFile file) {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String email = authentication.getName();
+
+            User user = userService.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            ArtistProfile artistProfile = artistService.findByUserId(user.getId())
+                    .orElseThrow(() -> new RuntimeException("Artist profile not found"));
+
+            // Upload video to S3
+            String videoUrl = s3Service.uploadArtistPortfolioVideo(file, artistProfile.getId());
+
+            // Update artist profile with video URL
+            artistProfile.setVideoUrl(videoUrl);
+            artistService.save(artistProfile);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Portfolio video uploaded successfully");
+            response.put("data", Map.of(
+                "videoUrl", videoUrl,
+                "fileName", file.getOriginalFilename(),
+                "fileSize", file.getSize()
+            ));
+
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            log.error("Validation error uploading portfolio video", e);
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        } catch (Exception e) {
+            log.error("Error uploading portfolio video", e);
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "Failed to upload portfolio video");
+            response.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    @PostMapping("/profile/upload-profile-image")
+    @Operation(summary = "Upload Profile Image", description = "Upload artist's profile image to S3")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Profile image uploaded successfully"),
+        @ApiResponse(responseCode = "400", description = "Invalid file or upload failed")
+    })
+    public ResponseEntity<Map<String, Object>> uploadProfileImage(
+            @RequestParam("file") MultipartFile file) {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String email = authentication.getName();
+
+            User user = userService.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            ArtistProfile artistProfile = artistService.findByUserId(user.getId())
+                    .orElseThrow(() -> new RuntimeException("Artist profile not found"));
+
+            // Upload profile image to S3
+            String profileImageUrl = s3Service.uploadArtistProfileImage(file, artistProfile.getId());
+
+            // Update artist profile with profile image URL
+            artistProfile.setProfileUrl(profileImageUrl);
+            artistService.save(artistProfile);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Profile image uploaded successfully");
+            response.put("data", Map.of(
+                "profileUrl", profileImageUrl,
+                "fileName", file.getOriginalFilename(),
+                "fileSize", file.getSize()
+            ));
+
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            log.error("Validation error uploading profile image", e);
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        } catch (Exception e) {
+            log.error("Error uploading profile image", e);
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "Failed to upload profile image");
             response.put("error", e.getMessage());
             return ResponseEntity.badRequest().body(response);
         }
