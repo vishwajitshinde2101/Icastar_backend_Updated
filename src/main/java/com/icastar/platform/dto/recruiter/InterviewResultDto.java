@@ -20,8 +20,23 @@ public class InterviewResultDto {
 
     private String notes;
 
+    // For HIRED result
+    private OfferDetails offerDetails;
+
+    // For REJECTED result
+    private String rejectionReason;
+
     public enum InterviewResult {
         HIRED,
         REJECTED
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class OfferDetails {
+        private Double salary;
+        private String contractUrl;
     }
 }
