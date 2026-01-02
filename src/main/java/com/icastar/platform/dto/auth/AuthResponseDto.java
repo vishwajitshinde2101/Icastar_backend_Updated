@@ -14,8 +14,9 @@ public class AuthResponseDto {
     private User.UserRole role;
     private User.UserStatus status;
     private Boolean isVerified;
+    private Boolean isOnboardingComplete;
     private String message;
-    
+
     public AuthResponseDto(String token, User user) {
         this.token = token;
         this.id = user.getId();
@@ -24,6 +25,7 @@ public class AuthResponseDto {
         this.role = user.getRole();
         this.status = user.getStatus();
         this.isVerified = user.getIsVerified();
+        this.isOnboardingComplete = user.getIsOnboardingComplete();
     }
     
     public AuthResponseDto(String message) {

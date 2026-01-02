@@ -27,9 +27,14 @@ import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import com.icastar.platform.service.ArtistService;
+import com.icastar.platform.entity.ArtistProfile;
+import com.icastar.platform.repository.BookmarkedJobRepository;
 
 @RestController
 @RequestMapping("/jobs")
@@ -42,6 +47,8 @@ public class JobController {
     private final UserService userService;
     private final BookmarkedJobService bookmarkedJobService;
     private final JobApplicationService jobApplicationService;
+    private final ArtistService artistService;
+    private final BookmarkedJobRepository bookmarkedJobRepository;
 
     @Operation(summary = "Get all jobs with filters", description = "Retrieve a paginated list of jobs with comprehensive filtering options")
     @ApiResponses(value = {
@@ -69,15 +76,28 @@ public class JobController {
             @Parameter(description = "Sort direction") @RequestParam(defaultValue = "desc") String sortDir) {
 
         try {
+            // Get authenticated user to check role
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String email = authentication.getName();
+            com.icastar.platform.entity.User currentUser = userService.findByEmail(email).orElse(null);
+
             Sort sort = Sort.by(Sort.Direction.fromString(sortDir), sortBy);
             Pageable pageable = PageRequest.of(page, size, sort);
-            
+
             // Create filter DTO
             com.icastar.platform.dto.job.JobFilterDto filter = new com.icastar.platform.dto.job.JobFilterDto();
             filter.setSearchTerm(searchTerm);
             filter.setJobType(jobType);
             filter.setExperienceLevel(experienceLevel);
-            filter.setStatus(status);
+
+            // Artists should only see ACTIVE jobs (unless they're admin or recruiter)
+            if (currentUser != null && currentUser.getRole() == com.icastar.platform.entity.User.UserRole.ARTIST) {
+                filter.setStatus(Job.JobStatus.ACTIVE);
+                log.info("Artist {} viewing jobs - filtering to ACTIVE jobs only", email);
+            } else {
+                filter.setStatus(status);
+            }
+
             filter.setMinPay(minPay);
             filter.setMaxPay(maxPay);
             filter.setLocation(location);
@@ -90,9 +110,34 @@ public class JobController {
             
             Page<Job> jobs = jobService.findJobsWithFilters(filter, pageable);
 
-            // Convert Job entities to JobDto to avoid Hibernate lazy loading issues
+            // Get bookmarked job IDs for artists (to avoid N+1 queries)
+            Set<Long> bookmarkedJobIds = new HashSet<>();
+            Long artistProfileId = null;
+            if (currentUser != null && currentUser.getRole() == com.icastar.platform.entity.User.UserRole.ARTIST) {
+                Optional<ArtistProfile> artistProfile = artistService.findByUserId(currentUser.getId());
+                if (artistProfile.isPresent()) {
+                    artistProfileId = artistProfile.get().getId();
+                    // Get all job IDs from current page
+                    List<Long> jobIds = jobs.getContent().stream()
+                            .map(Job::getId)
+                            .collect(java.util.stream.Collectors.toList());
+                    if (!jobIds.isEmpty()) {
+                        // Bulk fetch bookmarked job IDs to avoid N+1 queries
+                        List<Long> bookmarkedIds = bookmarkedJobRepository.findBookmarkedJobIdsByArtistIdAndJobIds(artistProfileId, jobIds);
+                        bookmarkedJobIds.addAll(bookmarkedIds);
+                    }
+                }
+            }
+
+            // Convert Job entities to JobDto with bookmark status
+            final Set<Long> finalBookmarkedJobIds = bookmarkedJobIds;
             List<com.icastar.platform.dto.job.JobDto> jobDtos = jobs.getContent().stream()
-                    .map(com.icastar.platform.dto.job.JobDto::new)
+                    .map(job -> {
+                        com.icastar.platform.dto.job.JobDto dto = new com.icastar.platform.dto.job.JobDto(job);
+                        // Set bookmark status for artists
+                        dto.setIsBookmarked(finalBookmarkedJobIds.contains(job.getId()));
+                        return dto;
+                    })
                     .collect(java.util.stream.Collectors.toList());
 
             Map<String, Object> response = new HashMap<>();
@@ -118,13 +163,40 @@ public class JobController {
     @GetMapping("/{id}")
     public ResponseEntity<Map<String, Object>> getJobById(@PathVariable Long id) {
         try {
+            // Get authenticated user to check role
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String email = authentication.getName();
+            com.icastar.platform.entity.User currentUser = userService.findByEmail(email).orElse(null);
+
             Optional<Job> job = jobService.findById(id);
             if (job.isPresent()) {
+                Job foundJob = job.get();
+
+                // Artists can only view ACTIVE jobs
+                if (currentUser != null && currentUser.getRole() == com.icastar.platform.entity.User.UserRole.ARTIST) {
+                    if (foundJob.getStatus() != Job.JobStatus.ACTIVE) {
+                        log.warn("Artist {} attempted to view non-active job {}", email, id);
+                        Map<String, Object> response = new HashMap<>();
+                        response.put("success", false);
+                        response.put("message", "Job not found or not available");
+                        return ResponseEntity.notFound().build();
+                    }
+                }
+
                 // Increment view count
                 jobService.incrementViews(id);
 
                 // Convert Job entity to JobDto to avoid Hibernate lazy loading issues
-                com.icastar.platform.dto.job.JobDto jobDto = new com.icastar.platform.dto.job.JobDto(job.get());
+                com.icastar.platform.dto.job.JobDto jobDto = new com.icastar.platform.dto.job.JobDto(foundJob);
+
+                // Set bookmark status for artists
+                if (currentUser != null && currentUser.getRole() == com.icastar.platform.entity.User.UserRole.ARTIST) {
+                    Optional<ArtistProfile> artistProfile = artistService.findByUserId(currentUser.getId());
+                    if (artistProfile.isPresent()) {
+                        boolean isBookmarked = bookmarkedJobRepository.existsByArtistIdAndJobId(artistProfile.get().getId(), id);
+                        jobDto.setIsBookmarked(isBookmarked);
+                    }
+                }
 
                 Map<String, Object> response = new HashMap<>();
                 response.put("success", true);

@@ -126,6 +126,6 @@ public class Job extends BaseEntity {
     }
 
     public enum JobStatus {
-        DRAFT, ACTIVE, PAUSED, CLOSED, CANCELLED, DELETED
+        DRAFT, ACTIVE, INACTIVE, PAUSED, CLOSED, CANCELLED, DELETED
     }
 }

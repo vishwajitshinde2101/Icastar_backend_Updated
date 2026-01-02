@@ -48,6 +48,9 @@ public class User extends BaseEntity {
     @Column(name = "is_verified", nullable = false)
     private Boolean isVerified = false;
 
+    @Column(name = "is_onboarding_complete", nullable = false)
+    private Boolean isOnboardingComplete = false;
+
     @Column(name = "last_login")
     private LocalDateTime lastLogin;
 

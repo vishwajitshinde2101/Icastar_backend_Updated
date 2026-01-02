@@ -20,6 +20,7 @@ public class ArtistProfileCompleteDto {
     private String phone;
     private String city;
     private Boolean isActive;
+    private Boolean isOnboardingComplete;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     
@@ -47,6 +48,9 @@ public class ArtistProfileCompleteDto {
     private String shoeSize;
     private String travelCities; // JSON string
     private Double hourlyRate;
+    private String photoUrl; // S3 URL for portfolio photo
+    private String videoUrl; // S3 URL for portfolio video
+    private String profileUrl; // S3 URL for profile image
     private Boolean isVerifiedBadge;
     private LocalDate verificationRequestedAt;
     private LocalDate verificationApprovedAt;

@@ -19,7 +19,11 @@ public interface JobRepository extends JpaRepository<Job, Long> {
 
     // Find jobs by recruiter
     List<Job> findByRecruiter(User recruiter);
-    
+
+    // Find jobs by recruiter ID
+    @Query("SELECT j FROM Job j WHERE j.recruiter.id = :recruiterId")
+    List<Job> findByRecruiterId(@Param("recruiterId") Long recruiterId);
+
     // Find job by ID with recruiter relationship loaded
     @Query("SELECT j FROM Job j LEFT JOIN FETCH j.recruiter WHERE j.id = :jobId")
     Optional<Job> findByIdWithRecruiter(@Param("jobId") Long jobId);
@@ -139,4 +143,19 @@ public interface JobRepository extends JpaRepository<Job, Long> {
             @Param("isUrgent") Boolean isUrgent,
             @Param("isFeatured") Boolean isFeatured,
             Pageable pageable);
+
+    // Artist dashboard queries
+
+    /**
+     * Find active jobs for AI matching
+     * Returns jobs with status=ACTIVE and (no deadline OR deadline in future)
+     */
+    @Query("SELECT j FROM Job j WHERE j.status = 'ACTIVE' AND (j.applicationDeadline IS NULL OR j.applicationDeadline >= :currentDate) ORDER BY j.publishedAt DESC")
+    List<Job> findActiveJobsForMatching(@Param("currentDate") LocalDate currentDate);
+
+    /**
+     * Check if artist has already applied to a job
+     */
+    @Query("SELECT CASE WHEN COUNT(ja) > 0 THEN true ELSE false END FROM JobApplication ja WHERE ja.artist.id = :artistId AND ja.job.id = :jobId")
+    boolean hasArtistAppliedToJob(@Param("artistId") Long artistId, @Param("jobId") Long jobId);
 }

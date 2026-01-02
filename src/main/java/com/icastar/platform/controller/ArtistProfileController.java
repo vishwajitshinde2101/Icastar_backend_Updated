@@ -30,7 +30,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/artists")
+@RequestMapping("/artist-profiles")
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Artist Profile Management", description = "APIs for managing artist profiles with complete CRUD operations")
@@ -67,7 +67,7 @@ public class ArtistProfileController {
                     )
             )
     })
-    @GetMapping("/profile/complete")
+    @GetMapping(value = {"/complete", "/me"}, produces = "application/json")
     @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<Map<String, Object>> getCompleteProfile() {
         try {
@@ -100,7 +100,7 @@ public class ArtistProfileController {
             description = "Get complete artist profile by artist profile ID for public viewing.",
             operationId = "getArtistProfileById"
     )
-    @GetMapping("/profile/{id}")
+    @GetMapping("/{id:[0-9]+}")
     public ResponseEntity<Map<String, Object>> getArtistProfileById(@PathVariable Long id) {
         try {
             ArtistProfileCompleteDto profile = artistProfileService.getCompleteProfileById(id)
@@ -126,7 +126,7 @@ public class ArtistProfileController {
             description = "Get all artist profiles with pagination support.",
             operationId = "getAllArtistProfiles"
     )
-    @GetMapping("/profiles")
+    @GetMapping("")
     public ResponseEntity<Map<String, Object>> getAllArtistProfiles(Pageable pageable) {
         try {
             Page<ArtistProfileCompleteDto> profiles = artistProfileService.getAllCompleteProfiles(pageable);
@@ -155,7 +155,7 @@ public class ArtistProfileController {
             description = "Get artist profiles filtered by artist type (e.g., ACTOR, DANCER, SINGER).",
             operationId = "getArtistProfilesByType"
     )
-    @GetMapping("/profiles/type/{artistType}")
+    @GetMapping("/type/{artistType}")
     public ResponseEntity<Map<String, Object>> getArtistProfilesByType(@PathVariable String artistType) {
         try {
             List<ArtistProfileCompleteDto> profiles = artistProfileService.getProfilesByArtistType(artistType);
@@ -181,7 +181,7 @@ public class ArtistProfileController {
             description = "Search artist profiles by name, stage name, or skills.",
             operationId = "searchArtistProfiles"
     )
-    @GetMapping("/profiles/search")
+    @GetMapping("/search")
     public ResponseEntity<Map<String, Object>> searchArtistProfiles(@RequestParam String q) {
         try {
             List<ArtistProfileCompleteDto> profiles = artistProfileService.searchProfiles(q);
@@ -229,7 +229,7 @@ public class ArtistProfileController {
                     )
             )
     })
-    @PutMapping("/profile")
+    @PutMapping("")
     @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<Map<String, Object>> updateArtistProfile(
             @Parameter(description = "Complete artist profile update details", required = true)
@@ -264,7 +264,7 @@ public class ArtistProfileController {
             description = "Upload a document for the artist profile (profile image, documents, videos, etc.).",
             operationId = "uploadDocument"
     )
-    @PostMapping("/profile/documents")
+    @PostMapping("/documents")
     @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<Map<String, Object>> uploadDocument(
             @RequestParam("file") MultipartFile file,
@@ -300,7 +300,7 @@ public class ArtistProfileController {
             description = "Delete the artist profile and all associated documents.",
             operationId = "deleteArtistProfile"
     )
-    @DeleteMapping("/profile")
+    @DeleteMapping("")
     @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<Map<String, Object>> deleteArtistProfile() {
         try {

@@ -54,17 +54,22 @@ public class JobApplicationController {
             @Parameter(description = "Job application details", required = true)
             @Valid @RequestBody CreateJobApplicationDto createDto) {
         try {
-            log.info("Received job application request: {}", createDto);
+            log.info("Received job application request for job ID: {}", createDto.getJobId());
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             String email = authentication.getName();
+            log.info("User applying: {}", email);
 
             User user = userService.findByEmail(email)
                     .orElseThrow(() -> new RuntimeException("User not found"));
+            log.info("Found user with ID: {}", user.getId());
 
             ArtistProfile artistProfile = artistService.findByUserId(user.getId())
                     .orElseThrow(() -> new RuntimeException("Artist profile not found"));
+            log.info("Found artist profile with ID: {}", artistProfile.getId());
 
             JobApplication application = jobApplicationService.createApplication(artistProfile.getId(), createDto);
+            log.info("Successfully created application with ID: {} for artist ID: {} and job ID: {}",
+                    application.getId(), artistProfile.getId(), createDto.getJobId());
 
             // Convert entity to DTO to avoid Jackson serialization issues
             JobApplicationDto applicationDto = new JobApplicationDto();
@@ -133,22 +138,27 @@ public class JobApplicationController {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             String email = authentication.getName();
+            log.info("[/applications/my-applications] Fetching applications for user: {}", email);
 
             User user = userService.findByEmail(email)
                     .orElseThrow(() -> new RuntimeException("User not found"));
+            log.info("[/applications/my-applications] Found user with ID: {}", user.getId());
 
             ArtistProfile artistProfile = artistService.findByUserId(user.getId())
                     .orElseThrow(() -> new RuntimeException("Artist profile not found"));
+            log.info("[/applications/my-applications] Found artist profile with ID: {}", artistProfile.getId());
 
             Sort sort = Sort.by(Sort.Direction.fromString(sortDir), sortBy);
             Pageable pageable = PageRequest.of(page, size, sort);
             Page<JobApplication> applications;
 
             if (status != null) {
+                log.info("[/applications/my-applications] Filtering by status: {}", status);
                 applications = jobApplicationService.findByArtistAndStatus(artistProfile, status, pageable);
             } else {
                 applications = jobApplicationService.findByArtist(artistProfile, pageable);
             }
+            log.info("[/applications/my-applications] Found {} applications for artist ID: {}", applications.getTotalElements(), artistProfile.getId());
 
             // Apply search filters if provided
             if (jobTitle != null || companyName != null) {

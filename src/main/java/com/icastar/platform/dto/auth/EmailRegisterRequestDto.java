@@ -15,7 +15,7 @@ public class EmailRegisterRequestDto {
     private String email;
     
     @NotBlank(message = "Mobile number is required")
-    @Pattern(regexp = "^[6-9]\\d{9}$", message = "Mobile number must be a 10-digit number starting with 6, 7, 8, or 9")
+    @Pattern(regexp = "^\\d{10}$", message = "Mobile number must be a 10-digit number")
     private String mobile;
     
     @NotBlank(message = "Password is required")

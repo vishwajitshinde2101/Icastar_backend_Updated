@@ -138,6 +138,85 @@ public class S3Service {
     }
 
     /**
+     * Upload artist portfolio photo
+     * @param file Photo file to upload
+     * @param artistId Artist's ID for folder organization
+     * @return S3 URL of uploaded photo
+     */
+    public String uploadArtistPortfolioPhoto(MultipartFile file, Long artistId) {
+        validateImageFile(file);
+        String folder = String.format("artists/%d/portfolio/photos", artistId);
+        log.info("Uploading portfolio photo for artist {}: {}", artistId, file.getOriginalFilename());
+        return uploadFile(file, folder);
+    }
+
+    /**
+     * Upload artist portfolio video
+     * @param file Video file to upload
+     * @param artistId Artist's ID for folder organization
+     * @return S3 URL of uploaded video
+     */
+    public String uploadArtistPortfolioVideo(MultipartFile file, Long artistId) {
+        validateVideoFile(file);
+        String folder = String.format("artists/%d/portfolio/videos", artistId);
+        log.info("Uploading portfolio video for artist {}: {}", artistId, file.getOriginalFilename());
+        return uploadFile(file, folder);
+    }
+
+    /**
+     * Upload artist profile image (different from portfolio photo)
+     * @param file Profile image file
+     * @param artistId Artist's ID for folder organization
+     * @return S3 URL of uploaded profile image
+     */
+    public String uploadArtistProfileImage(MultipartFile file, Long artistId) {
+        validateImageFile(file);
+        String folder = String.format("artists/%d/profile", artistId);
+        log.info("Uploading profile image for artist {}: {}", artistId, file.getOriginalFilename());
+        return uploadFile(file, folder);
+    }
+
+    /**
+     * Validate image file
+     */
+    private void validateImageFile(MultipartFile file) {
+        if (file.isEmpty()) {
+            throw new IllegalArgumentException("File is empty");
+        }
+
+        String contentType = file.getContentType();
+        if (contentType == null || !contentType.startsWith("image/")) {
+            throw new IllegalArgumentException("File must be an image (jpg, png, gif, etc.)");
+        }
+
+        // Max 10MB for images
+        long maxSize = 10 * 1024 * 1024;
+        if (file.getSize() > maxSize) {
+            throw new IllegalArgumentException("Image file size must not exceed 10MB");
+        }
+    }
+
+    /**
+     * Validate video file
+     */
+    private void validateVideoFile(MultipartFile file) {
+        if (file.isEmpty()) {
+            throw new IllegalArgumentException("File is empty");
+        }
+
+        String contentType = file.getContentType();
+        if (contentType == null || !contentType.startsWith("video/")) {
+            throw new IllegalArgumentException("File must be a video (mp4, mov, avi, etc.)");
+        }
+
+        // Max 100MB for videos
+        long maxSize = 100 * 1024 * 1024;
+        if (file.getSize() > maxSize) {
+            throw new IllegalArgumentException("Video file size must not exceed 100MB");
+        }
+    }
+
+    /**
      * Delete file from S3
      * @param s3Url S3 URL to delete
      */
