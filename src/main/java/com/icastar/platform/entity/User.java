@@ -45,10 +45,10 @@ public class User extends BaseEntity {
     @Column(name = "status", nullable = false)
     private UserStatus status = UserStatus.ACTIVE;
 
-    @Column(name = "is_verified", nullable = false)
+    @Column(name = "is_verified", nullable = false, columnDefinition = "BOOLEAN DEFAULT false")
     private Boolean isVerified = false;
 
-    @Column(name = "is_onboarding_complete", nullable = false)
+    @Column(name = "is_onboarding_complete", nullable = false, columnDefinition = "BOOLEAN DEFAULT false")
     private Boolean isOnboardingComplete = false;
 
     @Column(name = "last_login")

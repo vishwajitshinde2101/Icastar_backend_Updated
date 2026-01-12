@@ -104,8 +104,17 @@ public class MyApplicationsController {
                         dto.setJobId(application.getJob().getId());
                         dto.setJobTitle(application.getJob().getTitle());
                         dto.setArtistId(application.getArtist().getId());
-                        dto.setArtistName(application.getArtist().getFirstName() + " " + application.getArtist().getLastName());
-                        dto.setArtistEmail(application.getArtist().getUser().getEmail());
+
+                        // Safely handle artist name
+                        String firstName = application.getArtist().getFirstName() != null ? application.getArtist().getFirstName() : "";
+                        String lastName = application.getArtist().getLastName() != null ? application.getArtist().getLastName() : "";
+                        dto.setArtistName((firstName + " " + lastName).trim());
+
+                        // Safely handle artist email
+                        if (application.getArtist().getUser() != null) {
+                            dto.setArtistEmail(application.getArtist().getUser().getEmail());
+                        }
+
                         dto.setStatus(application.getStatus());
                         dto.setCoverLetter(application.getCoverLetter());
                         dto.setExpectedSalary(application.getExpectedSalary());
