@@ -80,10 +80,16 @@ public class ArtistDashboardService {
             long currentMonthProjects = jobApplicationRepository.countByArtistIdAndHiredBetween(artistProfile.getId(), currentMonthStart, now);
             double projectsTrend = calculateTrend(currentMonthProjects, lastMonthProjects);
 
-            // 6. Credits Balance (Earnings)
+            // 6. Credits Balance (Earnings) - with null-safe handling
             BigDecimal totalEarnings = paymentRepository.sumEarningsByUserId(artist.getId());
             BigDecimal lastMonthEarnings = paymentRepository.sumEarningsByUserIdAndMonth(artist.getId(), lastMonthStart, lastMonthEnd);
             BigDecimal currentMonthEarnings = paymentRepository.sumEarningsByUserIdAndMonth(artist.getId(), currentMonthStart, now);
+
+            // Safely handle null BigDecimal values
+            totalEarnings = totalEarnings != null ? totalEarnings : BigDecimal.ZERO;
+            lastMonthEarnings = lastMonthEarnings != null ? lastMonthEarnings : BigDecimal.ZERO;
+            currentMonthEarnings = currentMonthEarnings != null ? currentMonthEarnings : BigDecimal.ZERO;
+
             double earningsTrend = calculateTrendBigDecimal(currentMonthEarnings, lastMonthEarnings);
 
             // Build response
@@ -453,6 +459,11 @@ public class ArtistDashboardService {
                 LocalDateTime monthEnd = monthStart.plusMonths(1).minusDays(1).withHour(23).withMinute(59).withSecond(59);
 
                 BigDecimal monthEarnings = paymentRepository.sumEarningsByUserIdAndMonth(artist.getId(), monthStart, monthEnd);
+
+                // Safely handle null values
+                if (monthEarnings == null) {
+                    monthEarnings = BigDecimal.ZERO;
+                }
 
                 String monthName = monthStart.getMonth().toString().substring(0, 3);
                 months.add(monthName);
