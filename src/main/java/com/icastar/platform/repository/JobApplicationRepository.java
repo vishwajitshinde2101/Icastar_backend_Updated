@@ -115,4 +115,76 @@ public interface JobApplicationRepository extends JpaRepository<JobApplication, 
 
     @Query("SELECT ja FROM JobApplication ja WHERE ja.job.id = :jobId")
     Page<JobApplication> findByJobId(@Param("jobId") Long jobId, Pageable pageable);
+
+    // Analytics queries for dashboard
+
+    // Find applications by job IDs
+    @Query("SELECT ja FROM JobApplication ja WHERE ja.job.id IN :jobIds")
+    Page<JobApplication> findByJobIdIn(@Param("jobIds") List<Long> jobIds, Pageable pageable);
+
+    // Count applications by job IDs
+    @Query("SELECT COUNT(ja) FROM JobApplication ja WHERE ja.job.id IN :jobIds")
+    Long countByJobIdIn(@Param("jobIds") List<Long> jobIds);
+
+    // Count applications by job IDs and status
+    @Query("SELECT COUNT(ja) FROM JobApplication ja WHERE ja.job.id IN :jobIds AND ja.status = :status")
+    Long countByJobIdInAndStatus(@Param("jobIds") List<Long> jobIds, @Param("status") JobApplication.ApplicationStatus status);
+
+    // Count hired applications by job IDs
+    @Query("SELECT COUNT(ja) FROM JobApplication ja WHERE ja.job.id IN :jobIds AND ja.isHired = :isHired")
+    Long countByJobIdInAndIsHired(@Param("jobIds") List<Long> jobIds, @Param("isHired") Boolean isHired);
+
+    // Count applications created after date
+    @Query("SELECT COUNT(ja) FROM JobApplication ja WHERE ja.job.id IN :jobIds AND ja.createdAt >= :date")
+    Long countByJobIdInAndCreatedAtAfter(@Param("jobIds") List<Long> jobIds, @Param("date") LocalDateTime date);
+
+    // Count hired applications after date
+    @Query("SELECT COUNT(ja) FROM JobApplication ja WHERE ja.job.id IN :jobIds AND ja.hiredAt >= :date")
+    Long countByJobIdInAndHiredAtAfter(@Param("jobIds") List<Long> jobIds, @Param("date") LocalDateTime date);
+
+    // Count applications created between dates
+    @Query("SELECT COUNT(ja) FROM JobApplication ja WHERE ja.job.id IN :jobIds AND ja.createdAt BETWEEN :startDate AND :endDate")
+    Long countByJobIdInAndCreatedAtBetween(@Param("jobIds") List<Long> jobIds, @Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate);
+
+    // Count interviews scheduled between dates
+    @Query("SELECT COUNT(ja) FROM JobApplication ja WHERE ja.job.id IN :jobIds AND ja.interviewScheduledAt BETWEEN :startDate AND :endDate")
+    Long countByJobIdInAndInterviewScheduledAtBetween(@Param("jobIds") List<Long> jobIds, @Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate);
+
+    // Count hires between dates
+    @Query("SELECT COUNT(ja) FROM JobApplication ja WHERE ja.job.id IN :jobIds AND ja.hiredAt BETWEEN :startDate AND :endDate")
+    Long countByJobIdInAndHiredAtBetween(@Param("jobIds") List<Long> jobIds, @Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate);
+
+    // Artist dashboard analytics queries
+
+    // Count applications by artist ID
+    @Query("SELECT COUNT(ja) FROM JobApplication ja WHERE ja.artist.id = :artistId")
+    Long countByArtistId(@Param("artistId") Long artistId);
+
+    // Count by artist and status
+    @Query("SELECT COUNT(ja) FROM JobApplication ja WHERE ja.artist.id = :artistId AND ja.status = :status")
+    Long countByArtistIdAndStatus(@Param("artistId") Long artistId, @Param("status") JobApplication.ApplicationStatus status);
+
+    // Count interviews for artist
+    @Query("SELECT COUNT(ja) FROM JobApplication ja WHERE ja.artist.id = :artistId AND ja.interviewScheduledAt IS NOT NULL")
+    Long countByArtistIdWithInterview(@Param("artistId") Long artistId);
+
+    // Count completed projects
+    @Query("SELECT COUNT(ja) FROM JobApplication ja WHERE ja.artist.id = :artistId AND ja.isHired = true")
+    Long countByArtistIdAndIsHired(@Param("artistId") Long artistId);
+
+    // Recent applications by artist
+    @Query("SELECT ja FROM JobApplication ja WHERE ja.artist.id = :artistId ORDER BY ja.createdAt DESC")
+    Page<JobApplication> findRecentByArtistId(@Param("artistId") Long artistId, Pageable pageable);
+
+    // Monthly application counts for artist
+    @Query("SELECT COUNT(ja) FROM JobApplication ja WHERE ja.artist.id = :artistId AND ja.createdAt BETWEEN :startDate AND :endDate")
+    Long countByArtistIdAndCreatedAtBetween(@Param("artistId") Long artistId, @Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate);
+
+    // Count interviews for artist in date range
+    @Query("SELECT COUNT(ja) FROM JobApplication ja WHERE ja.artist.id = :artistId AND ja.interviewScheduledAt BETWEEN :startDate AND :endDate")
+    Long countByArtistIdAndInterviewBetween(@Param("artistId") Long artistId, @Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate);
+
+    // Count completed projects for artist in date range
+    @Query("SELECT COUNT(ja) FROM JobApplication ja WHERE ja.artist.id = :artistId AND ja.isHired = true AND ja.hiredAt BETWEEN :startDate AND :endDate")
+    Long countByArtistIdAndHiredBetween(@Param("artistId") Long artistId, @Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate);
 }

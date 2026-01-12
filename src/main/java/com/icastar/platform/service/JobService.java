@@ -516,16 +516,16 @@ public class JobService {
 
         switch (from) {
             case DRAFT:
-                isValidTransition = (to == Job.JobStatus.ACTIVE || to == Job.JobStatus.CANCELLED);
+                isValidTransition = (to == Job.JobStatus.ACTIVE || to == Job.JobStatus.CLOSED);
                 break;
             case ACTIVE:
-                isValidTransition = (to == Job.JobStatus.PAUSED || to == Job.JobStatus.CLOSED || to == Job.JobStatus.CANCELLED);
+                isValidTransition = (to == Job.JobStatus.PAUSED || to == Job.JobStatus.CLOSED || to == Job.JobStatus.CANCELLED || to == Job.JobStatus.DRAFT);
                 break;
             case PAUSED:
                 isValidTransition = (to == Job.JobStatus.ACTIVE || to == Job.JobStatus.CLOSED || to == Job.JobStatus.CANCELLED);
                 break;
             case CLOSED:
-                isValidTransition = (to == Job.JobStatus.ACTIVE); // Allow reopening
+                isValidTransition = (to == Job.JobStatus.ACTIVE || to == Job.JobStatus.DRAFT); // Allow reopening to ACTIVE or DRAFT
                 break;
             case CANCELLED:
                 isValidTransition = false; // Cannot transition from cancelled
@@ -551,10 +551,7 @@ public class JobService {
         if (!job.getRecruiter().getId().equals(recruiterId)) {
             throw new RuntimeException("You don't have permission to delete this job");
         }
-
-        job.setStatus(Job.JobStatus.CANCELLED);
-        job.setClosedAt(LocalDateTime.now());
-        jobRepository.save(job);
+        jobRepository.deleteById(jobId);
     }
 
     public void incrementViews(Long jobId) {

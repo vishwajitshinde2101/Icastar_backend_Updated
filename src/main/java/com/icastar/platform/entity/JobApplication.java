@@ -80,6 +80,12 @@ public class JobApplication extends BaseEntity {
     @Column(name = "hired_at")
     private LocalDateTime hiredAt;
 
+    @Column(name = "rejected_at")
+    private LocalDateTime rejectedAt;
+
+    @Column(name = "offered_salary")
+    private Double offeredSalary;
+
     @Column(name = "contract_url")
     private String contractUrl;
 

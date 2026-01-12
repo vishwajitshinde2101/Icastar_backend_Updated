@@ -69,4 +69,14 @@ public interface UsageTrackingRepository extends JpaRepository<UsageTracking, Lo
     // Get usage statistics by user ID
     @Query("SELECT ut.featureType, COUNT(ut), SUM(ut.featureValue) FROM UsageTracking ut WHERE ut.userId = :userId GROUP BY ut.featureType")
     List<Object[]> getUsageStatisticsByUserId(@Param("userId") Long userId);
+
+    // Artist dashboard - Profile views queries
+
+    // Count total profile views for artist
+    @Query("SELECT COUNT(ut) FROM UsageTracking ut WHERE ut.userId = :userId AND ut.featureName = 'PROFILE_VIEW'")
+    Long countProfileViewsByUserId(@Param("userId") Long userId);
+
+    // Count profile views for artist in date range
+    @Query("SELECT COUNT(ut) FROM UsageTracking ut WHERE ut.userId = :userId AND ut.featureName = 'PROFILE_VIEW' AND ut.usageDate BETWEEN :startDate AND :endDate")
+    Long countProfileViewsByUserIdAndMonth(@Param("userId") Long userId, @Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate);
 }
