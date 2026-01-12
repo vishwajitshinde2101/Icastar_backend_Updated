@@ -50,6 +50,7 @@ public class CorsConfig implements WebMvcConfigurer {
         } else {
             // Default origins for development
             configuration.setAllowedOrigins(Arrays.asList(
+                "https://icastar.com",
                 "https://icaster.netlify.app",
                 "https://icastar.netlify.app",
                 "http://localhost:3000",
