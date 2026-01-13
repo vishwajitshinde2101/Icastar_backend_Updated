@@ -124,6 +124,18 @@ public class ArtistProfile extends BaseEntity {
     @Column(name = "profile_url")
     private String profileUrl; // S3 URL for artist's profile image
 
+    @Column(name = "cover_photo_url")
+    private String coverPhotoUrl; // S3 URL for artist's cover photo
+
+    @Column(name = "id_proof_url")
+    private String idProofUrl; // S3 URL for artist's ID proof document
+
+    @Column(name = "id_proof_verified", nullable = false)
+    private Boolean idProofVerified = false;
+
+    @Column(name = "id_proof_uploaded_at")
+    private LocalDate idProofUploadedAt;
+
     @Column(name = "is_verified_badge", nullable = false)
     private Boolean isVerifiedBadge = false;
 

@@ -219,6 +219,16 @@ public class ArtistProfileService {
             if (updateDto.getProfileUrl() != null) {
                 artistProfile.setProfileUrl(updateDto.getProfileUrl());
             }
+            if (updateDto.getCoverPhotoUrl() != null) {
+                artistProfile.setCoverPhotoUrl(updateDto.getCoverPhotoUrl());
+            }
+            if (updateDto.getIdProofUrl() != null) {
+                artistProfile.setIdProofUrl(updateDto.getIdProofUrl());
+                // Set upload timestamp when ID proof is uploaded
+                if (artistProfile.getIdProofUploadedAt() == null) {
+                    artistProfile.setIdProofUploadedAt(java.time.LocalDate.now());
+                }
+            }
 
             // Handle onboarding completion
             if (updateDto.getIsOnboardingComplete() != null) {
@@ -313,6 +323,10 @@ public class ArtistProfileService {
         dto.setPhotoUrl(artistProfile.getPhotoUrl());
         dto.setVideoUrl(artistProfile.getVideoUrl());
         dto.setProfileUrl(artistProfile.getProfileUrl());
+        dto.setCoverPhotoUrl(artistProfile.getCoverPhotoUrl());
+        dto.setIdProofUrl(artistProfile.getIdProofUrl());
+        dto.setIdProofVerified(artistProfile.getIdProofVerified());
+        dto.setIdProofUploadedAt(artistProfile.getIdProofUploadedAt());
         dto.setIsVerifiedBadge(artistProfile.getIsVerifiedBadge());
         dto.setVerificationRequestedAt(artistProfile.getVerificationRequestedAt());
         dto.setVerificationApprovedAt(artistProfile.getVerificationApprovedAt());

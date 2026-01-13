@@ -87,4 +87,28 @@ public interface CastingCallRepository extends JpaRepository<CastingCall, Long> 
     @Query("SELECT c FROM CastingCall c WHERE c.recruiter.id = :recruiterId AND c.deletedAt IS NULL " +
            "ORDER BY c.createdAt DESC")
     Page<CastingCall> findByRecruiterIdNotDeleted(@Param("recruiterId") Long recruiterId, Pageable pageable);
+
+    // ========== ARTIST ROLE-BASED QUERIES ==========
+
+    // Find open casting calls by roleType (for artist role-based filtering)
+    @Query("SELECT c FROM CastingCall c WHERE c.status = 'OPEN' AND " +
+           "(LOWER(c.roleType) = LOWER(:roleType) OR LOWER(c.roleType) LIKE LOWER(CONCAT('%', :roleType, '%'))) AND " +
+           "c.deletedAt IS NULL AND (c.auditionDeadline IS NULL OR c.auditionDeadline >= :currentDate) " +
+           "ORDER BY c.createdAt DESC")
+    Page<CastingCall> findOpenCastingCallsByRoleType(
+            @Param("roleType") String roleType,
+            @Param("currentDate") LocalDate currentDate,
+            Pageable pageable);
+
+    // Find all open casting calls (for artists without specific role filter)
+    @Query("SELECT c FROM CastingCall c WHERE c.status = 'OPEN' AND " +
+           "c.deletedAt IS NULL AND (c.auditionDeadline IS NULL OR c.auditionDeadline >= :currentDate) " +
+           "ORDER BY c.createdAt DESC")
+    Page<CastingCall> findAllOpenCastingCallsForArtist(@Param("currentDate") LocalDate currentDate, Pageable pageable);
+
+    // Count open casting calls by roleType
+    @Query("SELECT COUNT(c) FROM CastingCall c WHERE c.status = 'OPEN' AND " +
+           "(LOWER(c.roleType) = LOWER(:roleType) OR LOWER(c.roleType) LIKE LOWER(CONCAT('%', :roleType, '%'))) AND " +
+           "c.deletedAt IS NULL AND (c.auditionDeadline IS NULL OR c.auditionDeadline >= :currentDate)")
+    Long countOpenCastingCallsByRoleType(@Param("roleType") String roleType, @Param("currentDate") LocalDate currentDate);
 }

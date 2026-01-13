@@ -38,9 +38,9 @@ public class CreateCastingCallDto {
     private Boolean isPaid = true;
     private String paymentTerms;
 
-    // Scheduling
-    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
-    private LocalDateTime auditionDate;
+    // Scheduling - using String for flexible date parsing
+    private String auditionDate;  // Can be "2026-01-14" or "2026-01-14T10:00:00"
+    private String auditionTime;  // Optional time like "10:00"
 
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate auditionDeadline;

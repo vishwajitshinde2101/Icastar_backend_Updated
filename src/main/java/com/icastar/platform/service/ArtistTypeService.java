@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -22,6 +23,11 @@ public class ArtistTypeService {
 
     private final ArtistTypeRepository artistTypeRepository;
     private final ArtistTypeFieldRepository artistTypeFieldRepository;
+
+    @Transactional(readOnly = true)
+    public Optional<ArtistType> findById(Long id) {
+        return artistTypeRepository.findById(id);
+    }
 
     @Transactional(readOnly = true)
     public List<ArtistTypeDto> getAllActiveArtistTypes() {

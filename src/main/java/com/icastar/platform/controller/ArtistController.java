@@ -4,7 +4,10 @@ import com.icastar.platform.dto.ArtistProfileFieldDto;
 import com.icastar.platform.dto.artist.CreateArtistProfileDto;
 import com.icastar.platform.dto.artist.SimpleCreateArtistProfileDto;
 import com.icastar.platform.entity.ArtistProfile;
+import com.icastar.platform.entity.ArtistType;
 import com.icastar.platform.entity.User;
+
+import java.util.Optional;
 import com.icastar.platform.service.ArtistService;
 import com.icastar.platform.service.ArtistTypeService;
 import com.icastar.platform.service.UserService;
@@ -49,40 +52,55 @@ public class ArtistController {
     private final ObjectMapper objectMapper;
 
     @PostMapping("/profile")
-    @Operation(summary = "Create Artist Profile", description = "Create a new artist profile with simplified fields")
+    @Operation(summary = "Create or Update Artist Profile", description = "Create a new artist profile or update existing one with simplified fields")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Artist profile created successfully"),
-        @ApiResponse(responseCode = "400", description = "Invalid input or artist profile already exists")
+        @ApiResponse(responseCode = "200", description = "Artist profile created/updated successfully"),
+        @ApiResponse(responseCode = "400", description = "Invalid input")
     })
     public ResponseEntity<Map<String, Object>> createArtistProfile(@Valid @RequestBody SimpleCreateArtistProfileDto createDto) {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             String email = authentication.getName();
-            
+
             User user = userService.findByEmail(email)
                     .orElseThrow(() -> new RuntimeException("User not found"));
 
-            // Check if artist profile already exists
-            if (artistService.findByUserId(user.getId()).isPresent()) {
-                Map<String, Object> response = new HashMap<>();
-                response.put("success", false);
-                response.put("message", "Artist profile already exists");
-                return ResponseEntity.badRequest().body(response);
+            ArtistProfile artistProfile;
+            boolean isNewProfile = false;
+            String message;
+
+            // Check if artist profile already exists - if yes, update it
+            Optional<ArtistProfile> existingProfile = artistService.findByUserId(user.getId());
+
+            if (existingProfile.isPresent()) {
+                // Update existing profile
+                artistProfile = existingProfile.get();
+                message = "Artist profile updated successfully";
+                log.info("Updating existing artist profile for user: {}", email);
+            } else {
+                // Create new profile
+                isNewProfile = true;
+                String firstName = (user.getFirstName() != null && !user.getFirstName().trim().isEmpty())
+                    ? user.getFirstName().trim() : "User";
+                String lastName = (user.getLastName() != null && !user.getLastName().trim().isEmpty())
+                    ? user.getLastName().trim() : "Artist";
+
+                artistProfile = artistService.createArtistProfile(
+                        user.getId(),
+                        createDto.getArtistTypeId(),
+                        firstName,
+                        lastName
+                );
+                message = "Artist profile created successfully";
+                log.info("Creating new artist profile for user: {}", email);
             }
 
-            // Create artist profile with simplified data
-            // Use user's name if available, otherwise use default values
-            String firstName = (user.getFirstName() != null && !user.getFirstName().trim().isEmpty()) 
-                ? user.getFirstName().trim() : "User";
-            String lastName = (user.getLastName() != null && !user.getLastName().trim().isEmpty()) 
-                ? user.getLastName().trim() : "Artist";
-            
-            ArtistProfile artistProfile = artistService.createArtistProfile(
-                    user.getId(), 
-                    createDto.getArtistTypeId(),
-                    firstName,
-                    lastName
-            );
+            // Update artistType if provided (for both create and update)
+            if (createDto.getArtistTypeId() != null) {
+                ArtistType artistType = artistTypeService.findById(createDto.getArtistTypeId())
+                        .orElseThrow(() -> new RuntimeException("Artist type not found with id: " + createDto.getArtistTypeId()));
+                artistProfile.setArtistType(artistType);
+            }
 
             // Set the additional fields from the simplified DTO
             if (createDto.getDateOfBirth() != null) {
@@ -98,23 +116,49 @@ public class ArtistController {
                 artistProfile.setExperienceYears(createDto.getExperienceYears());
             }
 
+            // Handle isOnboardingComplete flag
+            if (createDto.getIsOnboardingComplete() != null && createDto.getIsOnboardingComplete()) {
+                user.setIsOnboardingComplete(true);
+                userService.save(user);
+            }
+
             artistService.save(artistProfile);
 
             // Get dynamic fields for the response
             List<ArtistProfileFieldDto> dynamicFields = artistService.getDynamicFields(artistProfile.getId());
 
+            // Build response with artistType details
+            Map<String, Object> profileData = new HashMap<>();
+            profileData.put("id", artistProfile.getId());
+            profileData.put("firstName", artistProfile.getFirstName());
+            profileData.put("lastName", artistProfile.getLastName());
+            profileData.put("dateOfBirth", artistProfile.getDateOfBirth());
+            profileData.put("gender", artistProfile.getGender());
+            profileData.put("location", artistProfile.getLocation());
+            profileData.put("experienceYears", artistProfile.getExperienceYears());
+
+            // Include artistType (role) details for audition filtering
+            if (artistProfile.getArtistType() != null) {
+                Map<String, Object> artistTypeData = new HashMap<>();
+                artistTypeData.put("id", artistProfile.getArtistType().getId());
+                artistTypeData.put("name", artistProfile.getArtistType().getName());
+                artistTypeData.put("description", artistProfile.getArtistType().getDescription());
+                profileData.put("artistType", artistTypeData);
+            }
+
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
-            response.put("message", "Artist profile created successfully");
-            response.put("data", artistProfile);
+            response.put("message", message);
+            response.put("isNewProfile", isNewProfile);
+            response.put("data", profileData);
             response.put("dynamicFields", dynamicFields);
 
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            log.error("Error creating artist profile", e);
+            log.error("Error creating/updating artist profile", e);
             Map<String, Object> response = new HashMap<>();
             response.put("success", false);
-            response.put("message", "Failed to create artist profile");
+            response.put("message", "Failed to create/update artist profile");
             response.put("error", e.getMessage());
             return ResponseEntity.badRequest().body(response);
         }
@@ -161,6 +205,83 @@ public class ArtistController {
             Map<String, Object> response = new HashMap<>();
             response.put("success", false);
             response.put("message", "Failed to get artist profile");
+            response.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    /**
+     * Get complete profile for current logged-in artist
+     * GET /api/artists/profile/complete
+     */
+    @GetMapping("/profile/complete")
+    public ResponseEntity<Map<String, Object>> getCompleteProfile() {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String email = authentication.getName();
+
+            User user = userService.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            ArtistProfile artistProfile = artistService.findByUserId(user.getId())
+                    .orElseThrow(() -> new RuntimeException("Artist profile not found"));
+
+            // Initialize lazy-loaded fields
+            if (artistProfile.getArtistType() != null) {
+                artistProfile.getArtistType().getName();
+            }
+
+            // Get dynamic fields
+            List<ArtistProfileFieldDto> dynamicFields = artistService.getDynamicFields(artistProfile.getId());
+
+            // Build complete profile response
+            Map<String, Object> profileData = new HashMap<>();
+
+            // User info
+            profileData.put("userId", user.getId());
+            profileData.put("email", user.getEmail());
+            profileData.put("firstName", user.getFirstName());
+            profileData.put("lastName", user.getLastName());
+            profileData.put("mobile", user.getMobile());
+            profileData.put("isOnboardingComplete", user.getIsOnboardingComplete());
+
+            // Artist profile info
+            profileData.put("artistProfileId", artistProfile.getId());
+            profileData.put("stageName", artistProfile.getStageName());
+            profileData.put("bio", artistProfile.getBio());
+            profileData.put("dateOfBirth", artistProfile.getDateOfBirth());
+            profileData.put("gender", artistProfile.getGender());
+            profileData.put("location", artistProfile.getLocation());
+            profileData.put("skills", artistProfile.getSkills());
+            profileData.put("experienceYears", artistProfile.getExperienceYears());
+            profileData.put("hourlyRate", artistProfile.getHourlyRate());
+            profileData.put("photoUrl", artistProfile.getPhotoUrl());
+            profileData.put("videoUrl", artistProfile.getVideoUrl());
+            profileData.put("profileUrl", artistProfile.getProfileUrl());
+            profileData.put("isVerified", artistProfile.getIsVerifiedBadge());
+            profileData.put("isProfileComplete", artistProfile.getIsProfileComplete());
+
+            // Artist type (role) info
+            if (artistProfile.getArtistType() != null) {
+                Map<String, Object> artistTypeData = new HashMap<>();
+                artistTypeData.put("id", artistProfile.getArtistType().getId());
+                artistTypeData.put("name", artistProfile.getArtistType().getName());
+                artistTypeData.put("displayName", artistProfile.getArtistType().getDisplayName());
+                artistTypeData.put("description", artistProfile.getArtistType().getDescription());
+                profileData.put("artistType", artistTypeData);
+            }
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("data", profileData);
+            response.put("dynamicFields", dynamicFields);
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Error getting complete artist profile", e);
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "Failed to get complete artist profile");
             response.put("error", e.getMessage());
             return ResponseEntity.badRequest().body(response);
         }

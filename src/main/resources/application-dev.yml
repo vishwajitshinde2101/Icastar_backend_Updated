@@ -35,6 +35,16 @@ icastar:
     expiration-minutes: 10  # Longer expiration for dev
     length: 4  # Shorter OTP for dev
 
+# AWS S3 Configuration
+aws:
+  region: ap-south-1
+  s3:
+    bucket-name: icastar-uploads
+    presigned-url-expiration: 3600  # 1 hour in seconds
+  credentials:
+    access-key-id: ${AWS_ACCESS_KEY_ID:your-access-key}
+    secret-access-key: ${AWS_SECRET_ACCESS_KEY:your-secret-key}
+
 # Development Actuator
 management:
   endpoints:

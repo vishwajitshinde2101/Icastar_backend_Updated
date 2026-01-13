@@ -316,7 +316,8 @@ public class CastingCallService {
         entity.setIsPaid(dto.getIsPaid());
         entity.setPaymentTerms(dto.getPaymentTerms());
 
-        entity.setAuditionDate(dto.getAuditionDate());
+        // Parse auditionDate from String (handles "2026-01-14" or "2026-01-14T10:00:00")
+        entity.setAuditionDate(parseAuditionDateTime(dto.getAuditionDate(), dto.getAuditionTime()));
         entity.setAuditionDeadline(dto.getAuditionDeadline());
         entity.setEstimatedShootingStart(dto.getEstimatedShootingStart());
         entity.setEstimatedShootingEnd(dto.getEstimatedShootingEnd());
@@ -380,5 +381,40 @@ public class CastingCallService {
         if (dto.getContactEmail() != null) entity.setContactEmail(dto.getContactEmail());
         if (dto.getContactPhone() != null) entity.setContactPhone(dto.getContactPhone());
         if (dto.getAdditionalNotes() != null) entity.setAdditionalNotes(dto.getAdditionalNotes());
+    }
+
+    /**
+     * Parse audition date and time from flexible String formats
+     * Handles: empty string, "2026-01-14", "2026-01-14T10:00:00", with optional time
+     */
+    private LocalDateTime parseAuditionDateTime(String dateStr, String timeStr) {
+        if (dateStr == null || dateStr.trim().isEmpty()) {
+            return null;
+        }
+
+        try {
+            String trimmedDate = dateStr.trim();
+
+            // If it already contains time (ISO format with T)
+            if (trimmedDate.contains("T")) {
+                return LocalDateTime.parse(trimmedDate);
+            }
+
+            // Parse date only
+            java.time.LocalDate date = java.time.LocalDate.parse(trimmedDate);
+
+            // If time is provided separately
+            if (timeStr != null && !timeStr.trim().isEmpty()) {
+                java.time.LocalTime time = java.time.LocalTime.parse(timeStr.trim());
+                return LocalDateTime.of(date, time);
+            }
+
+            // Default to midnight
+            return date.atStartOfDay();
+
+        } catch (Exception e) {
+            log.warn("Failed to parse audition date '{}' with time '{}': {}", dateStr, timeStr, e.getMessage());
+            return null;
+        }
     }
 }

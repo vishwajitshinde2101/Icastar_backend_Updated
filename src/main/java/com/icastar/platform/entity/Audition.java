@@ -12,12 +12,8 @@ import java.time.LocalDateTime;
 @EqualsAndHashCode(callSuper = true)
 public class Audition extends BaseEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY) // Auto-increment primary key
-    private Long id;
-
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "job_application_id", nullable = false)
+    @JoinColumn(name = "job_application_id", nullable = true)
     private JobApplication jobApplication;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -25,8 +21,25 @@ public class Audition extends BaseEntity {
     private RecruiterProfile recruiter;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "artist_id", nullable = false)
+    @JoinColumn(name = "artist_id", nullable = true)
     private ArtistProfile artist;
+
+    // Target artist type for role-based filtering (for open auditions)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "target_artist_type_id", nullable = true)
+    private ArtistType targetArtistType;
+
+    // Title for the audition (for open auditions)
+    @Column(name = "title")
+    private String title;
+
+    // Description for the audition
+    @Column(name = "description", columnDefinition = "TEXT")
+    private String description;
+
+    // Flag to indicate if this is an open audition (any matching artist can apply)
+    @Column(name = "is_open_audition")
+    private Boolean isOpenAudition = false;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "audition_type", nullable = false)

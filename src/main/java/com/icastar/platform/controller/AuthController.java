@@ -1,9 +1,13 @@
 package com.icastar.platform.controller;
 
 import com.icastar.platform.dto.auth.*;
+import com.icastar.platform.entity.ArtistProfile;
+import com.icastar.platform.entity.ArtistType;
 import com.icastar.platform.entity.Otp;
 import com.icastar.platform.entity.RecruiterProfile;
 import com.icastar.platform.entity.User;
+import com.icastar.platform.repository.ArtistProfileRepository;
+import com.icastar.platform.repository.ArtistTypeRepository;
 import com.icastar.platform.repository.RecruiterProfileRepository;
 import com.icastar.platform.repository.UserRepository;
 import com.icastar.platform.security.JwtTokenProvider;
@@ -23,6 +27,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
@@ -44,6 +50,8 @@ public class AuthController {
     private final PasswordEncoder passwordEncoder;
     private final UserRepository userRepository;
     private final RecruiterProfileRepository recruiterProfileRepository;
+    private final ArtistProfileRepository artistProfileRepository;
+    private final ArtistTypeRepository artistTypeRepository;
 
 
     @Operation(
@@ -113,6 +121,86 @@ public class AuthController {
     @GetMapping("/vishwa")
     public String register() {
         return "Registered!";
+    }
+
+    /**
+     * Get current logged-in user details
+     * GET /api/auth/me
+     */
+    @GetMapping("/me")
+    @Operation(summary = "Get Current User", description = "Returns the currently authenticated user's details")
+    @SecurityRequirement(name = "bearerAuth")
+    public ResponseEntity<Map<String, Object>> getCurrentUser() {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+            if (authentication == null || authentication.getName() == null || "anonymousUser".equals(authentication.getName())) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", false);
+                response.put("message", "Not authenticated");
+                return ResponseEntity.status(401).body(response);
+            }
+
+            String email = authentication.getName();
+            User user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            // Build user data response
+            Map<String, Object> userData = new HashMap<>();
+            userData.put("id", user.getId());
+            userData.put("email", user.getEmail());
+            userData.put("mobile", user.getMobile());
+            userData.put("firstName", user.getFirstName());
+            userData.put("lastName", user.getLastName());
+            userData.put("role", user.getRole());
+            userData.put("status", user.getStatus());
+            userData.put("isVerified", user.getIsVerified());
+            userData.put("isOnboardingComplete", user.getIsOnboardingComplete());
+            userData.put("lastLogin", user.getLastLogin());
+
+            // Add profile info based on role
+            if (User.UserRole.ARTIST.equals(user.getRole())) {
+                artistProfileRepository.findByUserId(user.getId()).ifPresent(artistProfile -> {
+                    Map<String, Object> profileData = new HashMap<>();
+                    profileData.put("artistProfileId", artistProfile.getId());
+                    profileData.put("stageName", artistProfile.getStageName());
+                    profileData.put("isVerified", artistProfile.getIsVerifiedBadge());
+                    profileData.put("isProfileComplete", artistProfile.getIsProfileComplete());
+
+                    if (artistProfile.getArtistType() != null) {
+                        Map<String, Object> artistTypeData = new HashMap<>();
+                        artistTypeData.put("id", artistProfile.getArtistType().getId());
+                        artistTypeData.put("name", artistProfile.getArtistType().getName());
+                        artistTypeData.put("displayName", artistProfile.getArtistType().getDisplayName());
+                        profileData.put("artistType", artistTypeData);
+                    }
+
+                    userData.put("artistProfile", profileData);
+                });
+            } else if (User.UserRole.RECRUITER.equals(user.getRole())) {
+                recruiterProfileRepository.findByUserId(user.getId()).ifPresent(recruiterProfile -> {
+                    Map<String, Object> profileData = new HashMap<>();
+                    profileData.put("recruiterProfileId", recruiterProfile.getId());
+                    profileData.put("companyName", recruiterProfile.getCompanyName());
+                    profileData.put("isVerifiedCompany", recruiterProfile.getIsVerifiedCompany());
+                    userData.put("recruiterProfile", profileData);
+                });
+            }
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("data", userData);
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            log.error("Error getting current user", e);
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "Failed to get user details");
+            response.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
     }
 
 
@@ -318,10 +406,12 @@ public class AuthController {
             user.setEmail(request.getEmail());
             user.setMobile(request.getMobile());
             user.setPassword(passwordEncoder.encode(request.getPassword()));
-            user.setRole(request.getUserRole() );
+            user.setRole(request.getUserRole());
             user.setStatus(User.UserStatus.ACTIVE);
             user.setIsVerified(true); // Auto-verify for email registration
             user.setFailedLoginAttempts(0);
+            user.setFirstName(request.getFirstName());
+            user.setLastName(request.getLastName());
 
             User savedUser = userRepository.save(user);
 
@@ -332,6 +422,22 @@ public class AuthController {
                recruiterProfile.setCompanyName("");
                recruiterProfile.setContactPersonName(request.getFirstName() + " " + request.getLastName());
                recruiterProfileRepository.save(recruiterProfile);
+           } else if(User.UserRole.ARTIST == request.getUserRole()){
+               // Get default artist type (OTHER) for initial profile creation
+               ArtistType defaultArtistType = artistTypeRepository.findByName("OTHER")
+                       .orElseGet(() -> artistTypeRepository.findAll().stream().findFirst()
+                               .orElseThrow(() -> new RuntimeException("No artist types found in database")));
+
+               ArtistProfile artistProfile = new ArtistProfile();
+               artistProfile.setUser(savedUser);
+               artistProfile.setArtistType(defaultArtistType);
+               artistProfile.setFirstName(request.getFirstName());
+               artistProfile.setLastName(request.getLastName());
+               artistProfile.setIsVerifiedBadge(false);
+               artistProfile.setIsProfileComplete(false);
+               artistProfile.setTotalApplications(0);
+               artistProfile.setSuccessfulHires(0);
+               artistProfileRepository.save(artistProfile);
            }
 
             // Send welcome email (optional - can be implemented later)
