@@ -442,12 +442,12 @@ public class AuthController {
                artistProfileRepository.save(artistProfile);
            }
 
-            // Send welcome email (optional - can be implemented later)
-            try {
-                emailService.sendWelcomeEmail(savedUser.getEmail(), savedUser.getEmail());
-            } catch (Exception e) {
-                log.warn("Failed to send welcome email: {}", e.getMessage());
-            }
+            // Email sending disabled temporarily
+            // try {
+            //     emailService.sendWelcomeEmail(savedUser.getEmail(), savedUser.getEmail());
+            // } catch (Exception e) {
+            //     log.warn("Failed to send welcome email: {}", e.getMessage());
+            // }
 
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
