@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +26,7 @@ public class EmailService {
     @Value("${spring.mail.username}")
     private String fromEmail;
 
+    @Async
     @Transactional
     public void sendOtpEmail(String toEmail, String otp) {
         CommunicationLog logEntry = null;
@@ -67,6 +69,7 @@ public class EmailService {
         }
     }
 
+    @Async
     @Transactional
     public void sendWelcomeEmail(String toEmail, String firstName) {
         CommunicationLog logEntry = null;
@@ -113,6 +116,7 @@ public class EmailService {
         }
     }
 
+    @Async
     @Transactional
     public void sendJobAlertEmail(String toEmail, String artistName, String jobTitle, String companyName) {
         CommunicationLog logEntry = null;
@@ -156,6 +160,7 @@ public class EmailService {
         }
     }
 
+    @Async
     public void sendInterviewScheduleEmail(String toEmail, String applicantName, String jobTitle,
                                            String companyName, String recruiterName,
                                            LocalDateTime interviewDateTime, String interviewType,
@@ -296,6 +301,7 @@ public class EmailService {
     /**
      * Send email notification when applicant is hired
      */
+    @Async
     @Transactional
     public void sendHiredEmail(String toEmail, String applicantName, String jobTitle,
                                 String companyName, String notes) {
@@ -383,6 +389,7 @@ public class EmailService {
     /**
      * Send email notification when applicant is rejected
      */
+    @Async
     @Transactional
     public void sendRejectionEmail(String toEmail, String applicantName, String jobTitle,
                                     String companyName, String notes) {

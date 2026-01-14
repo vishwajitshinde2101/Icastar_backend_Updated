@@ -25,6 +25,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -130,6 +131,7 @@ public class AuthController {
     @GetMapping("/me")
     @Operation(summary = "Get Current User", description = "Returns the currently authenticated user's details")
     @SecurityRequirement(name = "bearerAuth")
+    @Transactional(readOnly = true)
     public ResponseEntity<Map<String, Object>> getCurrentUser() {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
