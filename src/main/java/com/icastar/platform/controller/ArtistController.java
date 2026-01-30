@@ -252,12 +252,28 @@ public class ArtistController {
             profileData.put("dateOfBirth", artistProfile.getDateOfBirth());
             profileData.put("gender", artistProfile.getGender());
             profileData.put("location", artistProfile.getLocation());
+            profileData.put("maritalStatus", artistProfile.getMaritalStatus());
+            profileData.put("languagesSpoken", artistProfile.getLanguagesSpoken());
+            profileData.put("comfortableAreas", artistProfile.getComfortableAreas());
+            profileData.put("projectsWorked", artistProfile.getProjectsWorked());
             profileData.put("skills", artistProfile.getSkills());
             profileData.put("experienceYears", artistProfile.getExperienceYears());
+            profileData.put("weight", artistProfile.getWeight());
+            profileData.put("height", artistProfile.getHeight());
+            profileData.put("hairColor", artistProfile.getHairColor());
+            profileData.put("hairLength", artistProfile.getHairLength());
+            profileData.put("hasTattoo", artistProfile.getHasTattoo());
+            profileData.put("hasMole", artistProfile.getHasMole());
+            profileData.put("shoeSize", artistProfile.getShoeSize());
+            profileData.put("eyeColor", artistProfile.getEyeColor());
+            profileData.put("complexion", artistProfile.getComplexion());
+            profileData.put("hasPassport", artistProfile.getHasPassport());
+            profileData.put("travelCities", artistProfile.getTravelCities());
             profileData.put("hourlyRate", artistProfile.getHourlyRate());
             profileData.put("photoUrl", artistProfile.getPhotoUrl());
             profileData.put("videoUrl", artistProfile.getVideoUrl());
             profileData.put("profileUrl", artistProfile.getProfileUrl());
+            profileData.put("coverPhotoUrl", artistProfile.getCoverPhotoUrl());
             profileData.put("isVerified", artistProfile.getIsVerifiedBadge());
             profileData.put("isProfileComplete", artistProfile.getIsProfileComplete());
 
@@ -357,6 +373,19 @@ public class ArtistController {
             }
             updatedProfile.setExperienceYears(updateDto.getExperienceYears());
             updatedProfile.setHourlyRate(updateDto.getHourlyRate());
+
+            // Physical / personal fields
+            updatedProfile.setMaritalStatus(updateDto.getMaritalStatus());
+            updatedProfile.setWeight(updateDto.getWeight());
+            updatedProfile.setHeight(updateDto.getHeight());
+            updatedProfile.setHairColor(updateDto.getHairColor());
+            updatedProfile.setHairLength(updateDto.getHairLength());
+            updatedProfile.setHasTattoo(updateDto.getHasTattoo());
+            updatedProfile.setHasMole(updateDto.getHasMole());
+            updatedProfile.setShoeSize(updateDto.getShoeSize());
+            updatedProfile.setEyeColor(updateDto.getEyeColor());
+            updatedProfile.setComplexion(updateDto.getComplexion());
+            updatedProfile.setHasPassport(updateDto.getHasPassport());
 
             // Handle portfolio URLs
             updatedProfile.setPhotoUrl(updateDto.getPhotoUrl());

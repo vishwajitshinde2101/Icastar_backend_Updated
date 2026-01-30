@@ -128,6 +128,66 @@ public class ArtistService {
             existingProfile.setHourlyRate(updatedProfile.getHourlyRate());
         }
 
+        // Physical / personal attribute fields
+        if (updatedProfile.getMaritalStatus() != null) {
+            existingProfile.setMaritalStatus(updatedProfile.getMaritalStatus());
+        }
+        if (updatedProfile.getWeight() != null) {
+            existingProfile.setWeight(updatedProfile.getWeight());
+        }
+        if (updatedProfile.getHeight() != null) {
+            existingProfile.setHeight(updatedProfile.getHeight());
+        }
+        if (updatedProfile.getHairColor() != null) {
+            existingProfile.setHairColor(updatedProfile.getHairColor());
+        }
+        if (updatedProfile.getHairLength() != null) {
+            existingProfile.setHairLength(updatedProfile.getHairLength());
+        }
+        if (updatedProfile.getHasTattoo() != null) {
+            existingProfile.setHasTattoo(updatedProfile.getHasTattoo());
+        }
+        if (updatedProfile.getHasMole() != null) {
+            existingProfile.setHasMole(updatedProfile.getHasMole());
+        }
+        if (updatedProfile.getShoeSize() != null) {
+            existingProfile.setShoeSize(updatedProfile.getShoeSize());
+        }
+        if (updatedProfile.getEyeColor() != null) {
+            existingProfile.setEyeColor(updatedProfile.getEyeColor());
+        }
+        if (updatedProfile.getComplexion() != null) {
+            existingProfile.setComplexion(updatedProfile.getComplexion());
+        }
+        if (updatedProfile.getHasPassport() != null) {
+            existingProfile.setHasPassport(updatedProfile.getHasPassport());
+        }
+
+        // JSON fields
+        if (updatedProfile.getLanguagesSpoken() != null) {
+            existingProfile.setLanguagesSpoken(updatedProfile.getLanguagesSpoken());
+        }
+        if (updatedProfile.getComfortableAreas() != null) {
+            existingProfile.setComfortableAreas(updatedProfile.getComfortableAreas());
+        }
+        if (updatedProfile.getProjectsWorked() != null) {
+            existingProfile.setProjectsWorked(updatedProfile.getProjectsWorked());
+        }
+        if (updatedProfile.getTravelCities() != null) {
+            existingProfile.setTravelCities(updatedProfile.getTravelCities());
+        }
+
+        // Portfolio URLs
+        if (updatedProfile.getPhotoUrl() != null) {
+            existingProfile.setPhotoUrl(updatedProfile.getPhotoUrl());
+        }
+        if (updatedProfile.getVideoUrl() != null) {
+            existingProfile.setVideoUrl(updatedProfile.getVideoUrl());
+        }
+        if (updatedProfile.getProfileUrl() != null) {
+            existingProfile.setProfileUrl(updatedProfile.getProfileUrl());
+        }
+
         ArtistProfile saved = artistProfileRepository.save(existingProfile);
         // Update profile completeness after saving
         updateProfileCompleteness(saved.getId());

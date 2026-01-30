@@ -204,6 +204,15 @@ public class ArtistProfileService {
             if (updateDto.getShoeSize() != null) {
                 artistProfile.setShoeSize(updateDto.getShoeSize());
             }
+            if (updateDto.getEyeColor() != null) {
+                artistProfile.setEyeColor(updateDto.getEyeColor());
+            }
+            if (updateDto.getComplexion() != null) {
+                artistProfile.setComplexion(updateDto.getComplexion());
+            }
+            if (updateDto.getHasPassport() != null) {
+                artistProfile.setHasPassport(updateDto.getHasPassport());
+            }
             if (updateDto.getTravelCities() != null) {
                 artistProfile.setTravelCities(updateDto.getTravelCities());
             }
@@ -318,6 +327,9 @@ public class ArtistProfileService {
         dto.setHasTattoo(artistProfile.getHasTattoo());
         dto.setHasMole(artistProfile.getHasMole());
         dto.setShoeSize(artistProfile.getShoeSize());
+        dto.setEyeColor(artistProfile.getEyeColor());
+        dto.setComplexion(artistProfile.getComplexion());
+        dto.setHasPassport(artistProfile.getHasPassport());
         dto.setTravelCities(artistProfile.getTravelCities());
         dto.setHourlyRate(artistProfile.getHourlyRate());
         dto.setPhotoUrl(artistProfile.getPhotoUrl());

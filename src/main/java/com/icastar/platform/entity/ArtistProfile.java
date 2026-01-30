@@ -109,6 +109,15 @@ public class ArtistProfile extends BaseEntity {
     @Column(name = "shoe_size")
     private String shoeSize;
 
+    @Column(name = "eye_color")
+    private String eyeColor;
+
+    @Column(name = "complexion")
+    private String complexion;
+
+    @Column(name = "has_passport")
+    private Boolean hasPassport = false;
+
     @Column(name = "travel_cities", columnDefinition = "JSON")
     private String travelCities; // JSON array of cities where can travel for shoots
 

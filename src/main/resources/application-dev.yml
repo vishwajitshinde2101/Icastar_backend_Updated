@@ -1,9 +1,9 @@
 # Development Environment Configuration
 spring:
   datasource:
-    url: jdbc:mysql://database-1.cbiskmeg4xyr.ap-south-1.rds.amazonaws.com:3306/icastar_dev?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true
-    username: admin
-    password: 93MndLi0u9WuV9veKLcC
+    url: ${DB_URL:jdbc:mysql://localhost:3306/icastar_dev?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true}
+    username: ${DB_USERNAME:admin}
+    password: ${DB_PASSWORD:}
   
   jpa:
     hibernate:
@@ -37,13 +37,13 @@ icastar:
 
 # AWS S3 Configuration
 aws:
-  region: ap-south-1
+  region: ${AWS_REGION:ap-south-1}
   s3:
-    bucket-name: icastar-uploads
+    bucket-name: ${AWS_S3_BUCKET:icastar-uploads}
     presigned-url-expiration: 3600  # 1 hour in seconds
   credentials:
-    access-key-id: ${AWS_ACCESS_KEY_ID:your-access-key}
-    secret-access-key: ${AWS_SECRET_ACCESS_KEY:your-secret-key}
+    access-key-id: ${AWS_ACCESS_KEY_ID:}
+    secret-access-key: ${AWS_SECRET_ACCESS_KEY:}
 
 # Development Actuator
 management:

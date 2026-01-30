@@ -468,4 +468,285 @@ public class EmailService {
             }
         }
     }
+
+    /**
+     * Send hire request email to artist
+     */
+    @Async
+    @Transactional
+    public void sendHireRequestEmail(String toEmail, String artistName, String recruiterName,
+                                     String companyName, String jobTitle, String message, Double offeredSalary) {
+        CommunicationLog logEntry = null;
+        try {
+            // Build HTML email
+            StringBuilder emailBody = new StringBuilder();
+            emailBody.append("<!DOCTYPE html>");
+            emailBody.append("<html><head><meta charset='UTF-8'></head><body style='font-family: Arial, sans-serif; line-height: 1.6; color: #333;'>");
+            emailBody.append("<div style='max-width: 600px; margin: 0 auto; padding: 20px;'>");
+
+            // Header
+            emailBody.append("<div style='background-color: #6366F1; color: white; padding: 30px; text-align: center; border-radius: 5px 5px 0 0;'>");
+            emailBody.append("<h1 style='margin: 0; font-size: 28px;'>New Hire Request!</h1>");
+            emailBody.append("<p style='margin: 10px 0 0 0; font-size: 18px;'>You've caught someone's attention</p>");
+            emailBody.append("</div>");
+
+            // Content
+            emailBody.append("<div style='background-color: #f9f9f9; padding: 30px; border-radius: 0 0 5px 5px;'>");
+            emailBody.append("<p style='font-size: 16px;'>Dear ").append(artistName).append(",</p>");
+            emailBody.append("<p style='font-size: 16px;'>Great news! <strong>").append(recruiterName).append("</strong> from <strong>").append(companyName).append("</strong> is interested in hiring you for:</p>");
+
+            // Job Details Box
+            emailBody.append("<div style='background-color: white; padding: 20px; border-radius: 5px; margin: 20px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1);'>");
+            emailBody.append("<div style='margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #e0e0e0;'>");
+            emailBody.append("<div style='color: #666; font-size: 14px;'>Position</div>");
+            emailBody.append("<div style='font-size: 18px; font-weight: bold; color: #6366F1;'>").append(jobTitle).append("</div>");
+            emailBody.append("</div>");
+
+            emailBody.append("<div style='margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #e0e0e0;'>");
+            emailBody.append("<div style='color: #666; font-size: 14px;'>Company</div>");
+            emailBody.append("<div style='font-size: 16px; font-weight: bold; color: #333;'>").append(companyName).append("</div>");
+            emailBody.append("</div>");
+
+            if (offeredSalary != null) {
+                emailBody.append("<div style='margin-bottom: 15px;'>");
+                emailBody.append("<div style='color: #666; font-size: 14px;'>Offered Salary</div>");
+                emailBody.append("<div style='font-size: 16px; font-weight: bold; color: #10B981;'>₹").append(String.format("%,.2f", offeredSalary)).append("</div>");
+                emailBody.append("</div>");
+            }
+            emailBody.append("</div>");
+
+            // Message from recruiter
+            if (message != null && !message.isEmpty()) {
+                emailBody.append("<div style='background-color: #EEF2FF; border-left: 4px solid #6366F1; padding: 15px; margin: 20px 0; border-radius: 3px;'>");
+                emailBody.append("<div style='font-weight: bold; margin-bottom: 5px;'>Message from ").append(recruiterName).append(":</div>");
+                emailBody.append("<div style='font-style: italic;'>\"").append(message).append("\"</div>");
+                emailBody.append("</div>");
+            }
+
+            // Call to action
+            emailBody.append("<div style='text-align: center; margin: 30px 0;'>");
+            emailBody.append("<p style='font-size: 16px;'>Log in to your iCastar account to review this opportunity and respond.</p>");
+            emailBody.append("</div>");
+
+            emailBody.append("<p style='font-size: 16px;'>Don't keep them waiting - respond soon to show your interest!</p>");
+
+            // Footer
+            emailBody.append("<div style='margin-top: 30px; padding-top: 20px; border-top: 2px solid #e0e0e0; text-align: center; color: #666;'>");
+            emailBody.append("<p style='margin: 5px 0;'>Best regards,</p>");
+            emailBody.append("<p style='margin: 5px 0; font-weight: bold;'>The iCastar Team</p>");
+            emailBody.append("</div>");
+
+            emailBody.append("</div></div></body></html>");
+
+            // Create communication log
+            String metadata = String.format("{\"artistName\":\"%s\",\"recruiterName\":\"%s\",\"companyName\":\"%s\",\"jobTitle\":\"%s\",\"type\":\"hire_request\"}",
+                    artistName, recruiterName, companyName, jobTitle);
+
+            logEntry = communicationLogService.createLog(
+                CommunicationLog.CommunicationType.EMAIL,
+                toEmail,
+                null,
+                "New Hire Request - " + jobTitle,
+                emailBody.toString(),
+                "HIRE_REQUEST",
+                null,
+                metadata
+            );
+
+            // Send HTML email
+            MimeMessage mimeMessage = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
+            helper.setFrom(fromEmail);
+            helper.setTo(toEmail);
+            helper.setSubject("New Hire Request - " + jobTitle + " at " + companyName);
+            helper.setText(emailBody.toString(), true);
+
+            mailSender.send(mimeMessage);
+
+            // Mark as sent
+            communicationLogService.markAsSent(logEntry.getId(), null);
+            log.info("Hire request email sent successfully to: {}", toEmail);
+
+        } catch (Exception e) {
+            log.error("Failed to send hire request email to: {}", toEmail, e);
+            if (logEntry != null) {
+                communicationLogService.markAsFailed(logEntry.getId(), e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * Send hire request reminder email to artist
+     */
+    @Async
+    @Transactional
+    public void sendHireRequestReminderEmail(String toEmail, String artistName, String recruiterName,
+                                              String companyName, String jobTitle) {
+        CommunicationLog logEntry = null;
+        try {
+            // Build HTML email
+            StringBuilder emailBody = new StringBuilder();
+            emailBody.append("<!DOCTYPE html>");
+            emailBody.append("<html><head><meta charset='UTF-8'></head><body style='font-family: Arial, sans-serif; line-height: 1.6; color: #333;'>");
+            emailBody.append("<div style='max-width: 600px; margin: 0 auto; padding: 20px;'>");
+
+            // Header
+            emailBody.append("<div style='background-color: #F59E0B; color: white; padding: 30px; text-align: center; border-radius: 5px 5px 0 0;'>");
+            emailBody.append("<h1 style='margin: 0; font-size: 28px;'>Reminder: Pending Hire Request</h1>");
+            emailBody.append("</div>");
+
+            // Content
+            emailBody.append("<div style='background-color: #f9f9f9; padding: 30px; border-radius: 0 0 5px 5px;'>");
+            emailBody.append("<p style='font-size: 16px;'>Dear ").append(artistName).append(",</p>");
+            emailBody.append("<p style='font-size: 16px;'>This is a friendly reminder that you have a pending hire request from <strong>").append(recruiterName).append("</strong> at <strong>").append(companyName).append("</strong> for the position of <strong>").append(jobTitle).append("</strong>.</p>");
+
+            emailBody.append("<div style='background-color: #FEF3C7; border-left: 4px solid #F59E0B; padding: 15px; margin: 20px 0; border-radius: 3px;'>");
+            emailBody.append("<div style='font-weight: bold;'>Don't miss this opportunity!</div>");
+            emailBody.append("<div>The recruiter is eagerly waiting for your response.</div>");
+            emailBody.append("</div>");
+
+            emailBody.append("<p style='font-size: 16px;'>Please log in to your iCastar account to review and respond to this opportunity.</p>");
+
+            // Footer
+            emailBody.append("<div style='margin-top: 30px; padding-top: 20px; border-top: 2px solid #e0e0e0; text-align: center; color: #666;'>");
+            emailBody.append("<p style='margin: 5px 0;'>Best regards,</p>");
+            emailBody.append("<p style='margin: 5px 0; font-weight: bold;'>The iCastar Team</p>");
+            emailBody.append("</div>");
+
+            emailBody.append("</div></div></body></html>");
+
+            // Create communication log
+            String metadata = String.format("{\"artistName\":\"%s\",\"recruiterName\":\"%s\",\"companyName\":\"%s\",\"jobTitle\":\"%s\",\"type\":\"hire_request_reminder\"}",
+                    artistName, recruiterName, companyName, jobTitle);
+
+            logEntry = communicationLogService.createLog(
+                CommunicationLog.CommunicationType.EMAIL,
+                toEmail,
+                null,
+                "Reminder: Pending Hire Request - " + jobTitle,
+                emailBody.toString(),
+                "HIRE_REQUEST_REMINDER",
+                null,
+                metadata
+            );
+
+            // Send HTML email
+            MimeMessage mimeMessage = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
+            helper.setFrom(fromEmail);
+            helper.setTo(toEmail);
+            helper.setSubject("Reminder: Pending Hire Request - " + jobTitle);
+            helper.setText(emailBody.toString(), true);
+
+            mailSender.send(mimeMessage);
+
+            // Mark as sent
+            communicationLogService.markAsSent(logEntry.getId(), null);
+            log.info("Hire request reminder email sent successfully to: {}", toEmail);
+
+        } catch (Exception e) {
+            log.error("Failed to send hire request reminder email to: {}", toEmail, e);
+            if (logEntry != null) {
+                communicationLogService.markAsFailed(logEntry.getId(), e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * Send hire request response notification to recruiter
+     */
+    @Async
+    @Transactional
+    public void sendHireRequestResponseEmail(String toEmail, String recruiterName, String artistName,
+                                              String jobTitle, com.icastar.platform.entity.HireRequest.HireRequestStatus status,
+                                              String artistResponse) {
+        CommunicationLog logEntry = null;
+        try {
+            boolean isAccepted = status == com.icastar.platform.entity.HireRequest.HireRequestStatus.ACCEPTED;
+            String statusText = isAccepted ? "Accepted" : "Declined";
+            String headerColor = isAccepted ? "#10B981" : "#EF4444";
+
+            // Build HTML email
+            StringBuilder emailBody = new StringBuilder();
+            emailBody.append("<!DOCTYPE html>");
+            emailBody.append("<html><head><meta charset='UTF-8'></head><body style='font-family: Arial, sans-serif; line-height: 1.6; color: #333;'>");
+            emailBody.append("<div style='max-width: 600px; margin: 0 auto; padding: 20px;'>");
+
+            // Header
+            emailBody.append("<div style='background-color: ").append(headerColor).append("; color: white; padding: 30px; text-align: center; border-radius: 5px 5px 0 0;'>");
+            emailBody.append("<h1 style='margin: 0; font-size: 28px;'>Hire Request ").append(statusText).append("</h1>");
+            emailBody.append("</div>");
+
+            // Content
+            emailBody.append("<div style='background-color: #f9f9f9; padding: 30px; border-radius: 0 0 5px 5px;'>");
+            emailBody.append("<p style='font-size: 16px;'>Dear ").append(recruiterName).append(",</p>");
+
+            if (isAccepted) {
+                emailBody.append("<p style='font-size: 16px;'>Great news! <strong>").append(artistName).append("</strong> has <strong style='color: #10B981;'>accepted</strong> your hire request for <strong>").append(jobTitle).append("</strong>!</p>");
+                emailBody.append("<div style='background-color: #D1FAE5; border-left: 4px solid #10B981; padding: 15px; margin: 20px 0; border-radius: 3px;'>");
+                emailBody.append("<div style='font-weight: bold;'>Next Steps:</div>");
+                emailBody.append("<div>Log in to your iCastar account to proceed with the hiring process.</div>");
+                emailBody.append("</div>");
+            } else {
+                emailBody.append("<p style='font-size: 16px;'><strong>").append(artistName).append("</strong> has <strong style='color: #EF4444;'>declined</strong> your hire request for <strong>").append(jobTitle).append("</strong>.</p>");
+            }
+
+            // Artist response if provided
+            if (artistResponse != null && !artistResponse.isEmpty()) {
+                String bgColor = isAccepted ? "#D1FAE5" : "#FEE2E2";
+                String borderColor = isAccepted ? "#10B981" : "#EF4444";
+                emailBody.append("<div style='background-color: ").append(bgColor).append("; border-left: 4px solid ").append(borderColor).append("; padding: 15px; margin: 20px 0; border-radius: 3px;'>");
+                emailBody.append("<div style='font-weight: bold; margin-bottom: 5px;'>Response from ").append(artistName).append(":</div>");
+                emailBody.append("<div style='font-style: italic;'>\"").append(artistResponse).append("\"</div>");
+                emailBody.append("</div>");
+            }
+
+            if (!isAccepted) {
+                emailBody.append("<p style='font-size: 16px;'>Don't be discouraged! There are many talented artists on iCastar. Keep searching and you'll find the perfect fit for your project.</p>");
+            }
+
+            // Footer
+            emailBody.append("<div style='margin-top: 30px; padding-top: 20px; border-top: 2px solid #e0e0e0; text-align: center; color: #666;'>");
+            emailBody.append("<p style='margin: 5px 0;'>Best regards,</p>");
+            emailBody.append("<p style='margin: 5px 0; font-weight: bold;'>The iCastar Team</p>");
+            emailBody.append("</div>");
+
+            emailBody.append("</div></div></body></html>");
+
+            // Create communication log
+            String metadata = String.format("{\"recruiterName\":\"%s\",\"artistName\":\"%s\",\"jobTitle\":\"%s\",\"status\":\"%s\",\"type\":\"hire_request_response\"}",
+                    recruiterName, artistName, jobTitle, statusText);
+
+            logEntry = communicationLogService.createLog(
+                CommunicationLog.CommunicationType.EMAIL,
+                toEmail,
+                null,
+                "Hire Request " + statusText + " - " + artistName,
+                emailBody.toString(),
+                "HIRE_REQUEST_RESPONSE",
+                null,
+                metadata
+            );
+
+            // Send HTML email
+            MimeMessage mimeMessage = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
+            helper.setFrom(fromEmail);
+            helper.setTo(toEmail);
+            helper.setSubject("Hire Request " + statusText + " - " + artistName);
+            helper.setText(emailBody.toString(), true);
+
+            mailSender.send(mimeMessage);
+
+            // Mark as sent
+            communicationLogService.markAsSent(logEntry.getId(), null);
+            log.info("Hire request response email sent successfully to: {}", toEmail);
+
+        } catch (Exception e) {
+            log.error("Failed to send hire request response email to: {}", toEmail, e);
+            if (logEntry != null) {
+                communicationLogService.markAsFailed(logEntry.getId(), e.getMessage());
+            }
+        }
+    }
 }

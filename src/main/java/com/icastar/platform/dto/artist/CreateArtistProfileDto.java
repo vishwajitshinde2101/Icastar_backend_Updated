@@ -65,6 +65,9 @@ public class CreateArtistProfileDto {
     private Boolean hasTattoo;
     private Boolean hasMole;
     private String shoeSize;
+    private String eyeColor;
+    private String complexion;
+    private Boolean hasPassport;
     private List<String> travelCities;
     
     // Nested DTOs

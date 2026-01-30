@@ -511,7 +511,7 @@ public class RecruiterDashboardService {
                 .jobId(application.getJob().getId())
                 .jobTitle(application.getJob().getTitle())
                 .artistId(application.getArtist().getId())
-                .artistName(application.getArtist().getUser().getEmail()) // Placeholder
+                .artistName(application.getArtist().getFirstName() + " " + application.getArtist().getLastName())
                 .artistEmail(application.getArtist().getUser().getEmail())
                 .artistPhone("N/A") // Placeholder
                 .artistCategory("Unknown") // Placeholder
@@ -541,7 +541,7 @@ public class RecruiterDashboardService {
 
         return ArtistSuggestionDto.builder()
                 .artistId(artistProfile.getId())
-                .artistName(artistProfile.getUser().getEmail()) // Placeholder
+                .artistName(artistProfile.getFirstName() + " " + artistProfile.getLastName())
                 .artistEmail(artistProfile.getUser().getEmail())
                 .artistCategory(artistProfile.getArtistType() != null ?
                         artistProfile.getArtistType().getDisplayName() : "Unknown")

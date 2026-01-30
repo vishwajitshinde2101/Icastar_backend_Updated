@@ -46,6 +46,9 @@ public class ArtistProfileCompleteDto {
     private Boolean hasTattoo;
     private Boolean hasMole;
     private String shoeSize;
+    private String eyeColor;
+    private String complexion;
+    private Boolean hasPassport;
     private String travelCities; // JSON string
     private Double hourlyRate;
     private String photoUrl; // S3 URL for portfolio photo
