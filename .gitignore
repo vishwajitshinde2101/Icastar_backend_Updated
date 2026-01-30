@@ -40,3 +40,6 @@ buildNumber.properties
 # Mac
 .DS_Store
 /logs
+
+# Local environment secrets
+src/main/resources/env.properties
