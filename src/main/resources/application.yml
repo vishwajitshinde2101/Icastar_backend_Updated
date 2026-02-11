@@ -71,13 +71,6 @@ cors:
 
 # Third-party Service Placeholders
 icastar:
-  aws:
-    s3:
-      bucket-name: ${AWS_S3_BUCKET:icastar-uploads}
-      region: ${AWS_REGION:us-east-1}
-      access-key: ${AWS_ACCESS_KEY:}
-      secret-key: ${AWS_SECRET_KEY:}
-  
   razorpay:
     key-id: ${RAZORPAY_KEY_ID:}
     key-secret: ${RAZORPAY_KEY_SECRET:}

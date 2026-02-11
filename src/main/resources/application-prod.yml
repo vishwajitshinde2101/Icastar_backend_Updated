@@ -57,10 +57,6 @@ icastar:
   otp:
     expiration-minutes: 5
     length: 6
-  aws:
-    s3:
-      bucket-name: ${AWS_S3_BUCKET}
-      region: ${AWS_REGION}
   razorpay:
     key-id: ${RAZORPAY_KEY_ID}
     key-secret: ${RAZORPAY_KEY_SECRET}

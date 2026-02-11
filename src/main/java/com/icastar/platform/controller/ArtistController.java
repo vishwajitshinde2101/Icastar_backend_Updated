@@ -11,7 +11,6 @@ import java.util.Optional;
 import com.icastar.platform.service.ArtistService;
 import com.icastar.platform.service.ArtistTypeService;
 import com.icastar.platform.service.UserService;
-import com.icastar.platform.service.S3Service;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -31,11 +30,17 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.awt.print.Pageable;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Value;
 
 @RestController
 @RequestMapping("/artists")
@@ -48,8 +53,10 @@ public class ArtistController {
     private final ArtistService artistService;
     private final ArtistTypeService artistTypeService;
     private final UserService userService;
-    private final S3Service s3Service;
     private final ObjectMapper objectMapper;
+
+    @Value("${icastar.file.upload-dir:uploads/}")
+    private String uploadDir;
 
     @PostMapping("/profile")
     @Operation(summary = "Create or Update Artist Profile", description = "Create a new artist profile or update existing one with simplified fields")
@@ -570,8 +577,8 @@ public class ArtistController {
             ArtistProfile artistProfile = artistService.findByUserId(user.getId())
                     .orElseThrow(() -> new RuntimeException("Artist profile not found"));
 
-            // Upload photo to S3
-            String photoUrl = s3Service.uploadArtistPortfolioPhoto(file, artistProfile.getId());
+            // Upload photo locally
+            String photoUrl = saveFileLocally(file, "artists/" + artistProfile.getId() + "/portfolio/photos");
 
             // Update artist profile with photo URL
             artistProfile.setPhotoUrl(photoUrl);
@@ -621,8 +628,8 @@ public class ArtistController {
             ArtistProfile artistProfile = artistService.findByUserId(user.getId())
                     .orElseThrow(() -> new RuntimeException("Artist profile not found"));
 
-            // Upload video to S3
-            String videoUrl = s3Service.uploadArtistPortfolioVideo(file, artistProfile.getId());
+            // Upload video locally
+            String videoUrl = saveFileLocally(file, "artists/" + artistProfile.getId() + "/portfolio/videos");
 
             // Update artist profile with video URL
             artistProfile.setVideoUrl(videoUrl);
@@ -672,8 +679,8 @@ public class ArtistController {
             ArtistProfile artistProfile = artistService.findByUserId(user.getId())
                     .orElseThrow(() -> new RuntimeException("Artist profile not found"));
 
-            // Upload profile image to S3
-            String profileImageUrl = s3Service.uploadArtistProfileImage(file, artistProfile.getId());
+            // Upload profile image locally
+            String profileImageUrl = saveFileLocally(file, "artists/" + artistProfile.getId() + "/profile");
 
             // Update artist profile with profile image URL
             artistProfile.setProfileUrl(profileImageUrl);
@@ -703,5 +710,37 @@ public class ArtistController {
             response.put("error", e.getMessage());
             return ResponseEntity.badRequest().body(response);
         }
+    }
+
+    /**
+     * Save file to local storage
+     */
+    private String saveFileLocally(MultipartFile file, String folder) {
+        try {
+            String fileName = generateFileName(file.getOriginalFilename());
+            Path uploadPath = Paths.get(uploadDir, folder);
+            Files.createDirectories(uploadPath);
+
+            Path filePath = uploadPath.resolve(fileName);
+            Files.copy(file.getInputStream(), filePath);
+
+            String fileUrl = "/" + uploadDir + folder + "/" + fileName;
+            log.info("File saved locally: {}", fileUrl);
+            return fileUrl;
+        } catch (IOException e) {
+            log.error("Error saving file locally", e);
+            throw new RuntimeException("Failed to save file: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Generate unique filename
+     */
+    private String generateFileName(String originalFilename) {
+        String extension = "";
+        if (originalFilename != null && originalFilename.contains(".")) {
+            extension = originalFilename.substring(originalFilename.lastIndexOf("."));
+        }
+        return UUID.randomUUID().toString() + extension;
     }
 }

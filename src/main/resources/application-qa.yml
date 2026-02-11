@@ -35,10 +35,6 @@ icastar:
   otp:
     expiration-minutes: 5
     length: 6
-  aws:
-    s3:
-      bucket-name: ${AWS_S3_BUCKET:icastar-qa-uploads}
-      region: ${AWS_REGION:us-east-1}
 
 # QA Actuator
 management:

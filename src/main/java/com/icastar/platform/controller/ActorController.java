@@ -6,7 +6,6 @@ import com.icastar.platform.entity.User;
 import com.icastar.platform.service.ArtistService;
 import com.icastar.platform.service.UserService;
 import com.icastar.platform.service.ActorService;
-import com.icastar.platform.service.S3Service;
 import com.icastar.platform.service.DocumentService;
 import com.icastar.platform.repository.ArtistProfileRepository;
 import com.icastar.platform.repository.ArtistTypeFieldRepository;
@@ -50,7 +49,6 @@ public class ActorController {
     private final ArtistProfileRepository artistProfileRepository;
     private final ArtistTypeFieldRepository artistTypeFieldRepository;
     private final ObjectMapper objectMapper;
-    private final S3Service s3Service;
     private final DocumentService documentService;
 
     @Operation(
