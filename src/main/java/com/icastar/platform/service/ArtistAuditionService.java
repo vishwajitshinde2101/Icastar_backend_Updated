@@ -2,9 +2,11 @@ package com.icastar.platform.service;
 
 import com.icastar.platform.entity.Audition;
 import com.icastar.platform.entity.ArtistProfile;
+import com.icastar.platform.entity.CastingCall;
 import com.icastar.platform.entity.User;
 import com.icastar.platform.repository.ArtistProfileRepository;
 import com.icastar.platform.repository.AuditionRepository;
+import com.icastar.platform.repository.CastingCallRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -13,6 +15,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -23,6 +26,7 @@ public class ArtistAuditionService {
 
     private final AuditionRepository auditionRepository;
     private final ArtistProfileRepository artistProfileRepository;
+    private final CastingCallRepository castingCallRepository;
 
     /**
      * Get all open auditions (paginated with optional status filter)
@@ -231,23 +235,23 @@ public class ArtistAuditionService {
                     .orElseThrow(() -> new RuntimeException("Artist profile not found"));
 
             LocalDateTime now = LocalDateTime.now();
+            LocalDate today = LocalDate.now();
 
             // Count upcoming auditions for this artist
             Long upcomingCount = auditionRepository.countUpcomingByArtistId(artistProfile.getId(), now);
             Long completedCount = auditionRepository.countCompletedByArtistId(artistProfile.getId());
 
-            // Count open auditions matching artist's role
-            Long openAuditionsForMyRole = 0L;
-            if (artistProfile.getArtistType() != null) {
-                openAuditionsForMyRole = auditionRepository.countOpenAuditionsByArtistTypeId(
-                        artistProfile.getArtistType().getId(), now);
-            }
+            // Count all open casting calls
+            Page<CastingCall> openCastingCalls = castingCallRepository.findAllOpenCastingCallsForArtist(
+                    today, PageRequest.of(0, 1));
+            Long openCastingCallsCount = openCastingCalls.getTotalElements();
 
             Map<String, Object> stats = new HashMap<>();
             stats.put("upcomingAuditions", upcomingCount);
             stats.put("completedAuditions", completedCount);
             stats.put("totalAuditions", upcomingCount + completedCount);
-            stats.put("openAuditionsForMyRole", openAuditionsForMyRole);
+            stats.put("openAuditionsForMyRole", openCastingCallsCount);
+            stats.put("openCastingCalls", openCastingCallsCount);
             stats.put("artistType", artistProfile.getArtistType() != null ? artistProfile.getArtistType().getDisplayName() : null);
 
             log.info("Audition stats fetched for artist: {}", artist.getEmail());
@@ -260,64 +264,108 @@ public class ArtistAuditionService {
     }
 
     /**
-     * Get open auditions matching artist's role (artistType)
+     * Get open auditions/casting calls for artists
      * GET /api/artist/auditions/open
      *
-     * This returns auditions where:
-     * - isOpenAudition = true
-     * - targetArtistType.id matches artist's artistType.id
-     * - status = SCHEDULED
-     * - scheduledAt >= now
+     * This returns ALL open casting calls where:
+     * - status = OPEN
+     * - auditionDeadline >= today (or null)
+     * - deletedAt IS NULL
      */
     @Transactional(readOnly = true)
     public Map<String, Object> getOpenAuditionsForMyRole(User artist, int page, int size) {
         try {
-            log.info("Fetching open auditions for artist: {}", artist.getEmail());
+            log.info("Fetching open casting calls for artist: {}", artist.getEmail());
 
             ArtistProfile artistProfile = artistProfileRepository.findByUserId(artist.getId())
                     .orElseThrow(() -> new RuntimeException("Artist profile not found"));
 
-            LocalDateTime now = LocalDateTime.now();
+            LocalDate today = LocalDate.now();
             Pageable pageable = PageRequest.of(page, size);
 
-            Page<Audition> auditionsPage;
-            String artistRole = null;
+            // Get ALL open casting calls (not filtered by artist type)
+            Page<CastingCall> castingCallsPage = castingCallRepository.findAllOpenCastingCallsForArtist(today, pageable);
 
-            if (artistProfile.getArtistType() != null) {
-                artistRole = artistProfile.getArtistType().getDisplayName();
-                Long artistTypeId = artistProfile.getArtistType().getId();
-                log.info("Fetching open auditions for artistTypeId: {} ({})", artistTypeId, artistRole);
-
-                // Query open auditions matching artist's role
-                auditionsPage = auditionRepository.findOpenAuditionsByArtistTypeId(artistTypeId, now, pageable);
-            } else {
-                // If no role set, show all open auditions
-                log.info("No role set for artist, fetching all open auditions");
-                auditionsPage = auditionRepository.findAllOpenAuditions(now, pageable);
-            }
+            String artistRole = artistProfile.getArtistType() != null ?
+                    artistProfile.getArtistType().getDisplayName() : null;
 
             List<Map<String, Object>> auditionsList = new ArrayList<>();
-            for (Audition audition : auditionsPage.getContent()) {
-                auditionsList.add(buildAuditionResponse(audition));
+            for (CastingCall castingCall : castingCallsPage.getContent()) {
+                auditionsList.add(buildCastingCallResponse(castingCall));
             }
 
             Map<String, Object> response = new HashMap<>();
             response.put("auditions", auditionsList);
-            response.put("currentPage", auditionsPage.getNumber());
-            response.put("totalPages", auditionsPage.getTotalPages());
-            response.put("totalElements", auditionsPage.getTotalElements());
-            response.put("hasNext", auditionsPage.hasNext());
-            response.put("hasPrevious", auditionsPage.hasPrevious());
+            response.put("currentPage", castingCallsPage.getNumber());
+            response.put("totalPages", castingCallsPage.getTotalPages());
+            response.put("totalElements", castingCallsPage.getTotalElements());
+            response.put("hasNext", castingCallsPage.hasNext());
+            response.put("hasPrevious", castingCallsPage.hasPrevious());
             response.put("artistRole", artistRole);
 
-            log.info("Found {} open auditions for artist: {} (role: {})",
+            log.info("Found {} open casting calls for artist: {} (role: {})",
                     auditionsList.size(), artist.getEmail(), artistRole);
             return response;
 
         } catch (Exception e) {
-            log.error("Error fetching open auditions for artist {}: {}", artist.getEmail(), e.getMessage(), e);
+            log.error("Error fetching open casting calls for artist {}: {}", artist.getEmail(), e.getMessage(), e);
             throw new RuntimeException("Failed to fetch open auditions: " + e.getMessage());
         }
+    }
+
+    /**
+     * Build response map from CastingCall entity
+     */
+    private Map<String, Object> buildCastingCallResponse(CastingCall castingCall) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("id", castingCall.getId());
+        data.put("title", castingCall.getTitle());
+        data.put("description", castingCall.getDescription());
+        data.put("roleType", castingCall.getRoleType());
+        data.put("projectType", castingCall.getProjectType());
+        data.put("projectName", castingCall.getProjectName());
+        data.put("characterName", castingCall.getCharacterName());
+        data.put("location", castingCall.getLocation());
+        data.put("auditionDate", castingCall.getAuditionDate());
+        data.put("auditionDeadline", castingCall.getAuditionDeadline());
+        data.put("auditionFormat", castingCall.getAuditionFormat() != null ? castingCall.getAuditionFormat().name() : null);
+        data.put("auditionLocation", castingCall.getAuditionLocation());
+        data.put("status", castingCall.getStatus() != null ? castingCall.getStatus().name() : null);
+        data.put("isOpenAudition", true);
+        data.put("isUrgent", castingCall.getIsUrgent());
+        data.put("isFeatured", castingCall.getIsFeatured());
+        data.put("acceptsRemoteAuditions", castingCall.getAcceptsRemoteAuditions());
+        data.put("requiresVideoAudition", castingCall.getRequiresVideoAudition());
+
+        // Age requirements
+        data.put("ageRangeMin", castingCall.getAgeRangeMin());
+        data.put("ageRangeMax", castingCall.getAgeRangeMax());
+        data.put("genderPreference", castingCall.getGenderPreference() != null ? castingCall.getGenderPreference().name() : null);
+
+        // Compensation
+        data.put("compensationMin", castingCall.getCompensationMin());
+        data.put("compensationMax", castingCall.getCompensationMax());
+        data.put("currency", castingCall.getCurrency());
+        data.put("isPaid", castingCall.getIsPaid());
+
+        // Stats
+        data.put("applicationsCount", castingCall.getApplicationsCount());
+        data.put("viewsCount", castingCall.getViewsCount());
+
+        data.put("createdAt", castingCall.getCreatedAt());
+        data.put("publishedAt", castingCall.getPublishedAt());
+
+        // Recruiter details
+        if (castingCall.getRecruiter() != null) {
+            Map<String, Object> recruiterDetails = new HashMap<>();
+            recruiterDetails.put("recruiterId", castingCall.getRecruiter().getId());
+            recruiterDetails.put("recruiterName", castingCall.getRecruiter().getFirstName() + " " +
+                    (castingCall.getRecruiter().getLastName() != null ? castingCall.getRecruiter().getLastName() : ""));
+            recruiterDetails.put("email", castingCall.getRecruiter().getEmail());
+            data.put("recruiter", recruiterDetails);
+        }
+
+        return data;
     }
 
     /**

@@ -1,6 +1,7 @@
 package com.icastar.platform.controller;
 
 import com.icastar.platform.dto.recruiter.*;
+import com.icastar.platform.dto.recruiter.UpdateRecruiterProfileDto;
 import com.icastar.platform.dto.application.JobApplicationDto;
 import com.icastar.platform.entity.User;
 import com.icastar.platform.service.RecruiterDashboardService;
@@ -709,6 +710,46 @@ public class RecruiterDashboardController {
             Map<String, Object> response = new HashMap<>();
             response.put("success", false);
             response.put("message", "Failed to fetch outcomes data: " + e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    /**
+     * Update recruiter's profile
+     * PUT /recruiter/dashboard/profile
+     *
+     * @param updateDto The profile fields to update
+     * @param authentication Authentication object containing user details
+     * @return Updated recruiter profile
+     */
+    @PutMapping("/profile")
+    public ResponseEntity<Map<String, Object>> updateRecruiterProfile(
+            @Valid @RequestBody UpdateRecruiterProfileDto updateDto,
+            Authentication authentication) {
+        try {
+            if (authentication == null || authentication.getName() == null) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", false);
+                response.put("message", "Authentication required");
+                return ResponseEntity.status(401).body(response);
+            }
+
+            String email = authentication.getName();
+            log.info("Updating recruiter profile for user: {}", email);
+
+            RecruiterProfileDto updatedProfile = recruiterDashboardService.updateRecruiterProfile(email, updateDto);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Profile updated successfully");
+            response.put("data", updatedProfile);
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Error updating recruiter profile: {}", e.getMessage(), e);
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "Failed to update profile: " + e.getMessage());
             return ResponseEntity.badRequest().body(response);
         }
     }

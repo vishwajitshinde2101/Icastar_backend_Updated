@@ -91,6 +91,15 @@ icastar:
     upload-dir: ${FILE_UPLOAD_DIR:uploads/}
     max-size: 50MB
 
+  # AWS S3 Configuration
+  aws:
+    s3:
+      access-key: ${AWS_ACCESS_KEY:}
+      secret-key: ${AWS_SECRET_KEY:}
+      region: ${AWS_REGION:ap-south-1}
+      bucket-name: ${AWS_S3_BUCKET:icastar-uploads}
+      presigned-url-expiration: 3600
+
 # Logging Configuration
 logging:
   level:

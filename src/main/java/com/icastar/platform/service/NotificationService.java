@@ -27,7 +27,7 @@ public class NotificationService {
      * Create a new notification
      * SECURITY: userId is derived from authenticated user, NOT from request params
      */
-    @Transactional
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
     public Notification createNotification(User user, Notification.NotificationType type,
                                           String title, String message,
                                           Notification.Priority priority, String actionUrl,
