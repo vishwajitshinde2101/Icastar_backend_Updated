@@ -89,8 +89,9 @@ public class CastingCallService {
         castingCall.setRecruiter(recruiter);
         mapDtoToEntity(dto, castingCall);
 
-        // Set initial status
-        castingCall.setStatus(CastingCall.CastingCallStatus.DRAFT);
+        // Set status to OPEN by default
+        castingCall.setStatus(CastingCall.CastingCallStatus.OPEN);
+        castingCall.setPublishedAt(java.time.LocalDateTime.now());
         castingCall.setApplicationsCount(0);
         castingCall.setViewsCount(0);
         castingCall.setShortlistedCount(0);

@@ -79,4 +79,7 @@ public class CreateCastingCallDto {
     private String contactEmail;
     private String contactPhone;
     private String additionalNotes;
+
+    // Publishing
+    private Boolean isPublished = false;
 }

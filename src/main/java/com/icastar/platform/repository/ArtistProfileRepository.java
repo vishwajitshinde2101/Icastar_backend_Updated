@@ -44,6 +44,9 @@ public interface ArtistProfileRepository extends JpaRepository<ArtistProfile, Lo
     @Query("SELECT ap FROM ArtistProfile ap WHERE ap.user.status = 'ACTIVE' AND ap.isActive = true")
     List<ArtistProfile> findActiveArtists();
 
+    @Query("SELECT ap FROM ArtistProfile ap WHERE ap.user.status = 'ACTIVE' AND ap.isActive = true")
+    Page<ArtistProfile> findActiveArtistsPageable(Pageable pageable);
+
     @Query("SELECT ap FROM ArtistProfile ap WHERE ap.user.status = 'ACTIVE' AND ap.isActive = true AND ap.isVerifiedBadge = true")
     List<ArtistProfile> findActiveVerifiedArtists();
 

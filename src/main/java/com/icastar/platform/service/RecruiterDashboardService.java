@@ -193,6 +193,7 @@ public class RecruiterDashboardService {
     
     /**
      * Browse artist profiles
+     * Only returns artists with ACTIVE user status
      */
     @Transactional(readOnly = true)
     public Page<ArtistSuggestionDto> browseArtists(String artistCategory, String artistType, String location,
@@ -203,8 +204,8 @@ public class RecruiterDashboardService {
         User recruiter = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Recruiter not found"));
 
-        // Get all artist profiles with filters
-        Page<ArtistProfile> artistProfiles = artistProfileRepository.findAll(pageable);
+        // Get only ACTIVE artist profiles (user.status = ACTIVE AND isActive = true)
+        Page<ArtistProfile> artistProfiles = artistProfileRepository.findActiveArtistsPageable(pageable);
         
         // Apply filters
         if (artistCategory != null) {
@@ -736,6 +737,64 @@ public class RecruiterDashboardService {
         return dto;
     }
 
+    /**
+     * Update recruiter profile
+     * @param email Email of the recruiter
+     * @param updateDto DTO containing fields to update
+     * @return Updated recruiter profile
+     */
+    @Transactional
+    public RecruiterProfileDto updateRecruiterProfile(String email, UpdateRecruiterProfileDto updateDto) {
+        User recruiter = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Recruiter not found"));
+
+        RecruiterProfile recruiterProfile = recruiterProfileRepository.findByUserId(recruiter.getId())
+                .orElseThrow(() -> new RuntimeException("Recruiter profile not found for user: " + email));
+
+        // Update company details
+        if (updateDto.getCompanyName() != null) {
+            recruiterProfile.setCompanyName(updateDto.getCompanyName());
+        }
+        if (updateDto.getCompanyDescription() != null) {
+            recruiterProfile.setCompanyDescription(updateDto.getCompanyDescription());
+        }
+        if (updateDto.getCompanyWebsite() != null) {
+            recruiterProfile.setCompanyWebsite(updateDto.getCompanyWebsite());
+        }
+        if (updateDto.getCompanyLogoUrl() != null) {
+            recruiterProfile.setCompanyLogoUrl(updateDto.getCompanyLogoUrl());
+        }
+        if (updateDto.getIndustry() != null) {
+            recruiterProfile.setIndustry(updateDto.getIndustry());
+        }
+        if (updateDto.getCompanySize() != null) {
+            recruiterProfile.setCompanySize(updateDto.getCompanySize());
+        }
+
+        // Update contact person details
+        if (updateDto.getContactPersonName() != null) {
+            recruiterProfile.setContactPersonName(updateDto.getContactPersonName());
+        }
+        if (updateDto.getContactPhone() != null) {
+            recruiterProfile.setContactPhone(updateDto.getContactPhone());
+        }
+        if (updateDto.getDesignation() != null) {
+            recruiterProfile.setDesignation(updateDto.getDesignation());
+        }
+
+        // Update location
+        if (updateDto.getLocation() != null) {
+            recruiterProfile.setLocation(updateDto.getLocation());
+        }
+
+        // Save updated profile
+        recruiterProfileRepository.save(recruiterProfile);
+
+        log.info("Recruiter profile updated for user: {}", email);
+
+        // Return updated profile
+        return getRecruiterProfile(email);
+    }
 
     @Transactional
     public void deleteJob(Long jobId, String email) {
