@@ -130,6 +130,9 @@ public class ArtistProfile extends BaseEntity {
     @Column(name = "video_url")
     private String videoUrl; // S3 URL for artist's portfolio video
 
+    @Column(name = "dance_showreel_url")
+    private String danceShowreelUrl; // S3 URL for artist's dance showreel video
+
     @Column(name = "profile_url")
     private String profileUrl; // S3 URL for artist's profile image
 
@@ -138,6 +141,9 @@ public class ArtistProfile extends BaseEntity {
 
     @Column(name = "id_proof_url")
     private String idProofUrl; // S3 URL for artist's ID proof document
+
+    @Column(name = "face_verification_url")
+    private String faceVerificationUrl; // S3 URL for artist's face verification image
 
     @Column(name = "id_proof_verified", nullable = false)
     private Boolean idProofVerified = false;

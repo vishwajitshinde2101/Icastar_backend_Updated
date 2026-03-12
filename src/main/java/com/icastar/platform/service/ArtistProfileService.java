@@ -265,6 +265,107 @@ public class ArtistProfileService {
     }
 
     /**
+     * Update artist profile photo URL
+     */
+    @Transactional
+    public String updateProfilePhotoUrl(Long userId, String profileUrl) {
+        try {
+            ArtistProfile artistProfile = artistProfileRepository.findByUserId(userId)
+                    .orElseThrow(() -> new RuntimeException("Artist profile not found for user ID: " + userId));
+
+            artistProfile.setProfileUrl(profileUrl);
+            artistProfileRepository.save(artistProfile);
+
+            log.info("Successfully updated profile photo URL for user ID: {}", userId);
+            return profileUrl;
+        } catch (Exception e) {
+            log.error("Error updating profile photo URL for user ID: {}", userId, e);
+            throw new RuntimeException("Failed to update profile photo URL: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Update artist cover photo URL
+     */
+    @Transactional
+    public String updateCoverPhotoUrl(Long userId, String coverPhotoUrl) {
+        try {
+            ArtistProfile artistProfile = artistProfileRepository.findByUserId(userId)
+                    .orElseThrow(() -> new RuntimeException("Artist profile not found for user ID: " + userId));
+
+            artistProfile.setCoverPhotoUrl(coverPhotoUrl);
+            artistProfileRepository.save(artistProfile);
+
+            log.info("Successfully updated cover photo URL for user ID: {}", userId);
+            return coverPhotoUrl;
+        } catch (Exception e) {
+            log.error("Error updating cover photo URL for user ID: {}", userId, e);
+            throw new RuntimeException("Failed to update cover photo URL: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Update artist ID proof URL
+     */
+    @Transactional
+    public String updateIdProofUrl(Long userId, String idProofUrl) {
+        try {
+            ArtistProfile artistProfile = artistProfileRepository.findByUserId(userId)
+                    .orElseThrow(() -> new RuntimeException("Artist profile not found for user ID: " + userId));
+
+            artistProfile.setIdProofUrl(idProofUrl);
+            artistProfile.setIdProofUploadedAt(java.time.LocalDate.now());
+            artistProfileRepository.save(artistProfile);
+
+            log.info("Successfully updated ID proof URL for user ID: {}", userId);
+            return idProofUrl;
+        } catch (Exception e) {
+            log.error("Error updating ID proof URL for user ID: {}", userId, e);
+            throw new RuntimeException("Failed to update ID proof URL: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Update artist dance showreel URL
+     */
+    @Transactional
+    public String updateDanceShowreelUrl(Long userId, String danceShowreelUrl) {
+        try {
+            ArtistProfile artistProfile = artistProfileRepository.findByUserId(userId)
+                    .orElseThrow(() -> new RuntimeException("Artist profile not found for user ID: " + userId));
+
+            artistProfile.setDanceShowreelUrl(danceShowreelUrl);
+            artistProfileRepository.save(artistProfile);
+
+            log.info("Successfully updated dance showreel URL for user ID: {}", userId);
+            return danceShowreelUrl;
+        } catch (Exception e) {
+            log.error("Error updating dance showreel URL for user ID: {}", userId, e);
+            throw new RuntimeException("Failed to update dance showreel URL: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Update artist face verification URL
+     */
+    @Transactional
+    public String updateFaceVerificationUrl(Long userId, String faceVerificationUrl) {
+        try {
+            ArtistProfile artistProfile = artistProfileRepository.findByUserId(userId)
+                    .orElseThrow(() -> new RuntimeException("Artist profile not found for user ID: " + userId));
+
+            artistProfile.setFaceVerificationUrl(faceVerificationUrl);
+            artistProfileRepository.save(artistProfile);
+
+            log.info("Successfully updated face verification URL for user ID: {}", userId);
+            return faceVerificationUrl;
+        } catch (Exception e) {
+            log.error("Error updating face verification URL for user ID: {}", userId, e);
+            throw new RuntimeException("Failed to update face verification URL: " + e.getMessage());
+        }
+    }
+
+    /**
      * Delete artist profile
      */
     @Transactional
@@ -337,6 +438,7 @@ public class ArtistProfileService {
         dto.setProfileUrl(artistProfile.getProfileUrl());
         dto.setCoverPhotoUrl(artistProfile.getCoverPhotoUrl());
         dto.setIdProofUrl(artistProfile.getIdProofUrl());
+        dto.setFaceVerificationUrl(artistProfile.getFaceVerificationUrl());
         dto.setIdProofVerified(artistProfile.getIdProofVerified());
         dto.setIdProofUploadedAt(artistProfile.getIdProofUploadedAt());
         dto.setIsVerifiedBadge(artistProfile.getIsVerifiedBadge());

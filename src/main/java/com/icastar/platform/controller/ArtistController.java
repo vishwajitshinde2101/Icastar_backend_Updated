@@ -279,8 +279,12 @@ public class ArtistController {
             profileData.put("hourlyRate", artistProfile.getHourlyRate());
             profileData.put("photoUrl", artistProfile.getPhotoUrl());
             profileData.put("videoUrl", artistProfile.getVideoUrl());
+            profileData.put("danceShowreelUrl", artistProfile.getDanceShowreelUrl());
             profileData.put("profileUrl", artistProfile.getProfileUrl());
             profileData.put("coverPhotoUrl", artistProfile.getCoverPhotoUrl());
+            profileData.put("idProofUrl", artistProfile.getIdProofUrl());
+            profileData.put("faceVerificationUrl", artistProfile.getFaceVerificationUrl());
+            profileData.put("idProofVerified", artistProfile.getIdProofVerified());
             profileData.put("isVerified", artistProfile.getIsVerifiedBadge());
             profileData.put("isProfileComplete", artistProfile.getIsProfileComplete());
 

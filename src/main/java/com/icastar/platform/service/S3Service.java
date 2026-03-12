@@ -7,12 +7,15 @@ import com.icastar.platform.entity.User;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.time.Duration;
 import java.util.UUID;
 
@@ -132,5 +135,68 @@ public class S3Service {
             return "";
         }
         return fileName.substring(fileName.lastIndexOf("."));
+    }
+
+    /**
+     * Upload file directly to S3 and return the file URL
+     *
+     * @param file       The multipart file to upload
+     * @param uploadType The type of upload (e.g., ARTIST_PROFILE_PHOTO)
+     * @param userId     The user ID
+     * @return The S3 file URL
+     */
+    public String uploadFile(MultipartFile file, String uploadType, Long userId) {
+        try {
+            if (!isConfigured()) {
+                throw new RuntimeException("S3 is not configured. Please set AWS credentials in application.yml");
+            }
+
+            // Generate unique file name
+            String uploadId = UUID.randomUUID().toString();
+            String fileExtension = getFileExtension(file.getOriginalFilename());
+            String uniqueFileName = uploadId + fileExtension;
+
+            // Build S3 key path based on upload type
+            String s3Key = buildS3KeyForUpload(uploadType, userId, uniqueFileName);
+
+            // Build the PutObjectRequest
+            PutObjectRequest putObjectRequest = PutObjectRequest.builder()
+                    .bucket(s3Config.getBucketName())
+                    .key(s3Key)
+                    .contentType(file.getContentType())
+                    .build();
+
+            // Upload to S3
+            s3Client.putObject(putObjectRequest, RequestBody.fromBytes(file.getBytes()));
+
+            // Build and return the file URL
+            String fileUrl = buildFileUrl(s3Key);
+
+            log.info("Successfully uploaded file to S3 - userId: {}, uploadType: {}, key: {}",
+                    userId, uploadType, s3Key);
+
+            return fileUrl;
+
+        } catch (IOException e) {
+            log.error("Error reading file for upload: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to read file: " + e.getMessage());
+        } catch (Exception e) {
+            log.error("Error uploading file to S3: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to upload file: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Build S3 key path for direct upload
+     */
+    private String buildS3KeyForUpload(String uploadType, Long userId, String fileName) {
+        return switch (uploadType.toUpperCase()) {
+            case "ARTIST_PROFILE_PHOTO" -> "profiles/artist_profile/" + userId + "/" + fileName;
+            case "COVER_PHOTO" -> "cover_photo_url/" + userId + "/" + fileName;
+            case "ID_PROOF" -> "id_proof_url/" + userId + "/" + fileName;
+            case "DANCE_SHOWREEL" -> "dance_showreel_url/" + userId + "/" + fileName;
+            case "RECRUITER_PROFILE_PHOTO" -> "profiles/recruiter_profile/" + userId + "/" + fileName;
+            default -> "uploads/general/" + userId + "/" + fileName;
+        };
     }
 }

@@ -56,6 +56,7 @@ public class ArtistProfileCompleteDto {
     private String profileUrl; // S3 URL for profile image
     private String coverPhotoUrl; // S3 URL for cover photo
     private String idProofUrl; // S3 URL for ID proof document
+    private String faceVerificationUrl; // S3 URL for face verification image
     private Boolean idProofVerified;
     private LocalDate idProofUploadedAt;
     private Boolean isVerifiedBadge;
