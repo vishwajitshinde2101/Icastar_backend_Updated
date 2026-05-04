@@ -540,45 +540,59 @@ public class RecruiterDashboardService {
         // Calculate profile completion percentage
         int completionPercentage = artistService.calculateProfileCompletionPercentage(artistProfile);
 
+        // Get experience level based on years
+        String experienceLevel = "Beginner";
+        Integer expYears = artistProfile.getExperienceYears();
+        if (expYears != null) {
+            if (expYears >= 10) {
+                experienceLevel = "Expert";
+            } else if (expYears >= 5) {
+                experienceLevel = "Experienced";
+            } else if (expYears >= 2) {
+                experienceLevel = "Intermediate";
+            }
+        }
+
         return ArtistSuggestionDto.builder()
                 .artistId(artistProfile.getId())
                 .artistName(artistProfile.getFirstName() + " " + artistProfile.getLastName())
                 .artistEmail(artistProfile.getUser().getEmail())
                 .artistCategory(artistProfile.getArtistType() != null ?
                         artistProfile.getArtistType().getDisplayName() : "Unknown")
-                .artistType("Unknown") // Placeholder
-                .location("N/A") // Placeholder
-                .bio("N/A") // Placeholder
-                .profilePhoto("N/A") // Placeholder
+                .artistType(artistProfile.getArtistType() != null ?
+                        artistProfile.getArtistType().getName() : "Unknown")
+                .location(artistProfile.getLocation() != null ? artistProfile.getLocation() : "N/A")
+                .bio(artistProfile.getBio() != null ? artistProfile.getBio() : "N/A")
+                .profilePhoto(artistProfile.getProfileUrl() != null ? artistProfile.getProfileUrl() : null)
                 .matchScore(0.0)
                 .matchReasons(new ArrayList<>())
                 .skills(new ArrayList<>())
                 .genres(new ArrayList<>())
                 .languages(new ArrayList<>())
-                .experienceYears(0) // Placeholder
-                .experienceLevel("Unknown") // Placeholder
+                .experienceYears(expYears != null ? expYears : 0)
+                .experienceLevel(experienceLevel)
                 .portfolioItems(new ArrayList<>())
                 .achievements(new ArrayList<>())
                 .certifications(new ArrayList<>())
-                .availability("N/A") // Placeholder
-                .preferredJobType("N/A") // Placeholder
+                .availability("N/A")
+                .preferredJobType("N/A")
                 .expectedSalaryMin(null)
                 .expectedSalaryMax(null)
                 .currency("USD")
-                .workLocation("N/A") // Placeholder
-                .workSchedule("N/A") // Placeholder
-                .phone("N/A") // Placeholder
-                .website("N/A") // Placeholder
+                .workLocation(artistProfile.getLocation() != null ? artistProfile.getLocation() : "N/A")
+                .workSchedule("N/A")
+                .phone(artistProfile.getUser().getMobile() != null ? artistProfile.getUser().getMobile() : "N/A")
+                .website("N/A")
                 .socialLinks(new ArrayList<>())
                 .contactPreference("Email")
-                .lastActive(LocalDateTime.now())
-                .totalApplications(0) // Placeholder
-                .totalHires(0) // Placeholder
-                .hireRate(0.0) // Placeholder
-                .verificationStatus("UNVERIFIED") // Placeholder
-                .isVerified(false)
+                .lastActive(artistProfile.getUpdatedAt() != null ? artistProfile.getUpdatedAt() : LocalDateTime.now())
+                .totalApplications(artistProfile.getTotalApplications() != null ? artistProfile.getTotalApplications() : 0)
+                .totalHires(artistProfile.getSuccessfulHires() != null ? artistProfile.getSuccessfulHires() : 0)
+                .hireRate(0.0)
+                .verificationStatus(artistProfile.getIsVerifiedBadge() != null && artistProfile.getIsVerifiedBadge() ? "VERIFIED" : "UNVERIFIED")
+                .isVerified(artistProfile.getIsVerifiedBadge() != null && artistProfile.getIsVerifiedBadge())
                 .isPremium(false)
-                .profileCompletionPercentage(completionPercentage) // Profile completion percentage
+                .profileCompletionPercentage(completionPercentage)
                 .canViewProfile(true)
                 .canContact(true)
                 .canShortlist(true)
