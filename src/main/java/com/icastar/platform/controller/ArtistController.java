@@ -279,6 +279,7 @@ public class ArtistController {
             profileData.put("hourlyRate", artistProfile.getHourlyRate());
             profileData.put("photoUrl", artistProfile.getPhotoUrl());
             profileData.put("videoUrl", artistProfile.getVideoUrl());
+            profileData.put("portfolioUrls", artistProfile.getPortfolioUrls());
             profileData.put("danceShowreelUrl", artistProfile.getDanceShowreelUrl());
             profileData.put("profileUrl", artistProfile.getProfileUrl());
             profileData.put("coverPhotoUrl", artistProfile.getCoverPhotoUrl());
