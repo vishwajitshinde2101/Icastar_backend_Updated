@@ -130,6 +130,9 @@ public class ArtistProfile extends BaseEntity {
     @Column(name = "video_url")
     private String videoUrl; // S3 URL for artist's portfolio video
 
+    @Column(name = "portfolio_urls", columnDefinition = "JSON")
+    private String portfolioUrls; // JSON array of portfolio URLs
+
     @Column(name = "dance_showreel_url")
     private String danceShowreelUrl; // S3 URL for artist's dance showreel video
 

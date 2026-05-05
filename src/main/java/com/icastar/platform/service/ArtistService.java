@@ -184,6 +184,9 @@ public class ArtistService {
         if (updatedProfile.getVideoUrl() != null) {
             existingProfile.setVideoUrl(updatedProfile.getVideoUrl());
         }
+        if (updatedProfile.getPortfolioUrls() != null) {
+            existingProfile.setPortfolioUrls(updatedProfile.getPortfolioUrls());
+        }
         if (updatedProfile.getProfileUrl() != null) {
             existingProfile.setProfileUrl(updatedProfile.getProfileUrl());
         }

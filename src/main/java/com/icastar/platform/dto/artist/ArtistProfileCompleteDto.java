@@ -53,6 +53,7 @@ public class ArtistProfileCompleteDto {
     private Double hourlyRate;
     private String photoUrl; // S3 URL for portfolio photo
     private String videoUrl; // S3 URL for portfolio video
+    private String portfolioUrls; // JSON string of portfolio URLs
     private String profileUrl; // S3 URL for profile image
     private String coverPhotoUrl; // S3 URL for cover photo
     private String idProofUrl; // S3 URL for ID proof document

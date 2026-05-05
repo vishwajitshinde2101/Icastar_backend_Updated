@@ -225,6 +225,9 @@ public class ArtistProfileService {
             if (updateDto.getVideoUrl() != null) {
                 artistProfile.setVideoUrl(updateDto.getVideoUrl());
             }
+            if (updateDto.getPortfolioUrls() != null) {
+                artistProfile.setPortfolioUrls(updateDto.getPortfolioUrls());
+            }
             if (updateDto.getProfileUrl() != null) {
                 artistProfile.setProfileUrl(updateDto.getProfileUrl());
             }
@@ -435,6 +438,7 @@ public class ArtistProfileService {
         dto.setHourlyRate(artistProfile.getHourlyRate());
         dto.setPhotoUrl(artistProfile.getPhotoUrl());
         dto.setVideoUrl(artistProfile.getVideoUrl());
+        dto.setPortfolioUrls(artistProfile.getPortfolioUrls());
         dto.setProfileUrl(artistProfile.getProfileUrl());
         dto.setCoverPhotoUrl(artistProfile.getCoverPhotoUrl());
         dto.setIdProofUrl(artistProfile.getIdProofUrl());

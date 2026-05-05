@@ -440,6 +440,15 @@ public class ArtistController {
                 }
             }
 
+            if (updateDto.getPortfolioUrls() != null) {
+                try {
+                    updatedProfile.setPortfolioUrls(objectMapper.writeValueAsString(updateDto.getPortfolioUrls()));
+                } catch (JsonProcessingException e) {
+                    log.error("Error converting portfolioUrls to JSON", e);
+                    throw new RuntimeException("Error processing portfolioUrls data");
+                }
+            }
+
             ArtistProfile savedProfile = artistService.updateArtistProfile(existingProfile.getId(), updatedProfile);
 
             // Handle dynamic fields if provided

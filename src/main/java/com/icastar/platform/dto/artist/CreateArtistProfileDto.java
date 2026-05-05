@@ -47,6 +47,7 @@ public class CreateArtistProfileDto {
     private String photoUrl; // S3 URL for artist's portfolio photo
     private String videoUrl; // S3 URL for artist's portfolio video
     private String profileUrl; // S3 URL for artist's profile image
+    private List<String> portfolioUrls; // List of portfolio URLs
 
     private List<ArtistProfileFieldDto> dynamicFields;
     
