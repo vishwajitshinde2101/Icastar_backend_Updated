@@ -223,13 +223,12 @@ public class ArtistDashboardService {
                     .orElseThrow(() -> new RuntimeException("Artist profile not found"));
 
             List<String> missingFields = new ArrayList<>();
-            int totalFields = 11;
+            int totalFields = 12;
             int completedFields = 0;
 
             // Check required fields
             if (artistProfile.getFirstName() != null && !artistProfile.getFirstName().trim().isEmpty()) completedFields++; else missingFields.add("First Name");
             if (artistProfile.getLastName() != null && !artistProfile.getLastName().trim().isEmpty()) completedFields++; else missingFields.add("Last Name");
-            if (artistProfile.getStageName() != null && !artistProfile.getStageName().trim().isEmpty()) completedFields++; else missingFields.add("Stage Name");
             if (artistProfile.getBio() != null && !artistProfile.getBio().trim().isEmpty()) completedFields++; else missingFields.add("Bio");
             if (artistProfile.getLocation() != null && !artistProfile.getLocation().trim().isEmpty()) completedFields++; else missingFields.add("Location");
             if (artistProfile.getSkills() != null && !artistProfile.getSkills().trim().isEmpty()) completedFields++; else missingFields.add("Skills");
@@ -238,6 +237,8 @@ public class ArtistDashboardService {
             if (artistProfile.getWeight() != null) completedFields++; else missingFields.add("Weight");
             if (artistProfile.getHeight() != null) completedFields++; else missingFields.add("Height");
             if (artistProfile.getLanguagesSpoken() != null && !artistProfile.getLanguagesSpoken().trim().isEmpty()) completedFields++; else missingFields.add("Languages Spoken");
+            if (artistProfile.getPortfolioUrls() != null && !artistProfile.getPortfolioUrls().trim().isEmpty()) completedFields++; else missingFields.add("Portfolio URLs");
+            if (artistProfile.getComfortableAreas() != null && !artistProfile.getComfortableAreas().trim().isEmpty()) completedFields++; else missingFields.add("Comfortable Areas");
 
             int completionPercentage = (completedFields * 100) / totalFields;
             boolean isProfileComplete = completionPercentage >= 80;
@@ -245,9 +246,6 @@ public class ArtistDashboardService {
             // Build recommendations
             List<String> recommendations = new ArrayList<>();
             if (!missingFields.isEmpty()) {
-                if (missingFields.contains("Stage Name")) {
-                    recommendations.add("Add a stage name to make your profile more memorable");
-                }
                 if (missingFields.contains("Bio")) {
                     recommendations.add("Write a compelling bio to attract recruiters");
                 }
@@ -256,6 +254,12 @@ public class ArtistDashboardService {
                 }
                 if (missingFields.contains("Weight") || missingFields.contains("Height")) {
                     recommendations.add("Complete physical attributes to improve job matching");
+                }
+                if (missingFields.contains("Portfolio URLs")) {
+                    recommendations.add("Add portfolio links to showcase your work");
+                }
+                if (missingFields.contains("Comfortable Areas")) {
+                    recommendations.add("Add comfortable areas to improve job matching");
                 }
             } else {
                 recommendations.add("Profile complete! Keep it updated for best results.");

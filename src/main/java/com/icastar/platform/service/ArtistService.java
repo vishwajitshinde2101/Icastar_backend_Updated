@@ -224,12 +224,11 @@ public class ArtistService {
         }
 
         int completedFields = 0;
-        int totalFields = 11; // Total number of fields to check
+        int totalFields = 12; // Total number of fields to check
 
         // Check required fields
         if (profile.getFirstName() != null && !profile.getFirstName().trim().isEmpty()) completedFields++;
         if (profile.getLastName() != null && !profile.getLastName().trim().isEmpty()) completedFields++;
-        if (profile.getStageName() != null && !profile.getStageName().trim().isEmpty()) completedFields++;
         if (profile.getBio() != null && !profile.getBio().trim().isEmpty()) completedFields++;
         if (profile.getLocation() != null && !profile.getLocation().trim().isEmpty()) completedFields++;
         if (profile.getSkills() != null && !profile.getSkills().trim().isEmpty()) completedFields++;
@@ -238,6 +237,8 @@ public class ArtistService {
         if (profile.getWeight() != null) completedFields++;
         if (profile.getHeight() != null) completedFields++;
         if (profile.getLanguagesSpoken() != null && !profile.getLanguagesSpoken().trim().isEmpty()) completedFields++;
+        if (profile.getPortfolioUrls() != null && !profile.getPortfolioUrls().trim().isEmpty()) completedFields++;
+        if (profile.getComfortableAreas() != null && !profile.getComfortableAreas().trim().isEmpty()) completedFields++;
 
         return totalFields > 0 ? (completedFields * 100) / totalFields : 0;
     }
