@@ -65,6 +65,30 @@ public class ArtistSuggestionDto {
     // Profile Completeness
     private Integer profileCompletionPercentage; // 0-100
 
+    // Physical Attributes
+    private Double hourlyRate;
+    private Double weight;
+    private Double height;
+    private String hairColor;
+    private String hairLength;
+    private String eyeColor;
+    private String complexion;
+    private Boolean hasTattoo;
+    private Boolean hasMole;
+    private String shoeSize;
+    private Boolean hasPassport;
+    private String gender;
+    private String maritalStatus;
+    private String dateOfBirth;
+
+    // Additional Fields
+    private List<String> comfortableAreas;
+    private List<String> travelCities;
+    private List<String> portfolioUrls;
+    private String videoUrl;
+    private String coverPhotoUrl;
+    private List<String> projectsWorked;
+
     // Quick Actions
     private Boolean canViewProfile;
     private Boolean canContact;

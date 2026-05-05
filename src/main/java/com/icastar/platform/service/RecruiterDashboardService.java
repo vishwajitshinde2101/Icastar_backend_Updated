@@ -24,6 +24,8 @@ import com.icastar.platform.dto.application.JobApplicationDto;
 
 import com.icastar.platform.dto.recruiter.CreateJobDto;
 import com.icastar.platform.exception.ValidationException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Service
 @RequiredArgsConstructor
@@ -40,6 +42,7 @@ public class RecruiterDashboardService {
     private final EmailService emailService;
     private final ArtistService artistService;
     private final NotificationService notificationService;
+    private final ObjectMapper objectMapper;
 
 
 
@@ -553,6 +556,14 @@ public class RecruiterDashboardService {
             }
         }
 
+        // Parse JSON fields
+        List<String> skillsList = parseJsonArray(artistProfile.getSkills());
+        List<String> languagesList = parseJsonArray(artistProfile.getLanguagesSpoken());
+        List<String> comfortableAreasList = parseJsonArray(artistProfile.getComfortableAreas());
+        List<String> travelCitiesList = parseJsonArray(artistProfile.getTravelCities());
+        List<String> portfolioUrlsList = parseJsonArray(artistProfile.getPortfolioUrls());
+        List<String> projectsWorkedList = parseJsonArray(artistProfile.getProjectsWorked());
+
         return ArtistSuggestionDto.builder()
                 .artistId(artistProfile.getId())
                 .artistName(artistProfile.getFirstName() + " " + artistProfile.getLastName())
@@ -566,12 +577,12 @@ public class RecruiterDashboardService {
                 .profilePhoto(artistProfile.getProfileUrl() != null ? artistProfile.getProfileUrl() : null)
                 .matchScore(0.0)
                 .matchReasons(new ArrayList<>())
-                .skills(new ArrayList<>())
+                .skills(skillsList)
                 .genres(new ArrayList<>())
-                .languages(new ArrayList<>())
+                .languages(languagesList)
                 .experienceYears(expYears != null ? expYears : 0)
                 .experienceLevel(experienceLevel)
-                .portfolioItems(new ArrayList<>())
+                .portfolioItems(portfolioUrlsList)
                 .achievements(new ArrayList<>())
                 .certifications(new ArrayList<>())
                 .availability("N/A")
@@ -593,12 +604,50 @@ public class RecruiterDashboardService {
                 .isVerified(artistProfile.getIsVerifiedBadge() != null && artistProfile.getIsVerifiedBadge())
                 .isPremium(false)
                 .profileCompletionPercentage(completionPercentage)
+                // Physical Attributes
+                .hourlyRate(artistProfile.getHourlyRate())
+                .weight(artistProfile.getWeight())
+                .height(artistProfile.getHeight())
+                .hairColor(artistProfile.getHairColor())
+                .hairLength(artistProfile.getHairLength())
+                .eyeColor(artistProfile.getEyeColor())
+                .complexion(artistProfile.getComplexion())
+                .hasTattoo(artistProfile.getHasTattoo())
+                .hasMole(artistProfile.getHasMole())
+                .shoeSize(artistProfile.getShoeSize())
+                .hasPassport(artistProfile.getHasPassport())
+                .gender(artistProfile.getGender() != null ? artistProfile.getGender().name() : null)
+                .maritalStatus(artistProfile.getMaritalStatus() != null ? artistProfile.getMaritalStatus().name() : null)
+                .dateOfBirth(artistProfile.getDateOfBirth() != null ? artistProfile.getDateOfBirth().toString() : null)
+                // Additional Fields
+                .comfortableAreas(comfortableAreasList)
+                .travelCities(travelCitiesList)
+                .portfolioUrls(portfolioUrlsList)
+                .videoUrl(artistProfile.getVideoUrl())
+                .coverPhotoUrl(artistProfile.getCoverPhotoUrl())
+                .projectsWorked(projectsWorkedList)
+                // Quick Actions
                 .canViewProfile(true)
                 .canContact(true)
                 .canShortlist(true)
                 .canInvite(true)
                 .canMessage(true)
                 .build();
+    }
+
+    /**
+     * Helper method to parse JSON array string to List<String>
+     */
+    private List<String> parseJsonArray(String jsonString) {
+        if (jsonString == null || jsonString.trim().isEmpty()) {
+            return new ArrayList<>();
+        }
+        try {
+            return objectMapper.readValue(jsonString, new TypeReference<List<String>>() {});
+        } catch (Exception e) {
+            log.warn("Failed to parse JSON array: {}", jsonString);
+            return new ArrayList<>();
+        }
     }
     
     private double calculateMatchScore(ArtistProfile profile, Job job, String artistCategory,
