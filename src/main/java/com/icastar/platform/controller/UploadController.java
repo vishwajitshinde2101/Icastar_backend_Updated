@@ -4,6 +4,7 @@ import com.icastar.platform.dto.upload.PresignedUrlRequestDto;
 import com.icastar.platform.dto.upload.PresignedUrlResponseDto;
 import com.icastar.platform.entity.User;
 import com.icastar.platform.service.ArtistProfileService;
+import com.icastar.platform.service.RecruiterDashboardService;
 import com.icastar.platform.service.S3Service;
 import com.icastar.platform.service.UserService;
 import jakarta.validation.Valid;
@@ -27,6 +28,7 @@ public class UploadController {
     private final S3Service s3Service;
     private final UserService userService;
     private final ArtistProfileService artistProfileService;
+    private final RecruiterDashboardService recruiterDashboardService;
 
     /**
      * Generate presigned URL for S3 upload
@@ -67,8 +69,14 @@ public class UploadController {
                         break;
                     case "PROFILE_PHOTO":
                     case "ARTIST_PROFILE":
-                        artistProfileService.updateProfilePhotoUrl(user.getId(), fileUrl);
-                        log.info("Saved profile photo URL for user: {}", email);
+                        // Check user role and update appropriate profile
+                        if (User.UserRole.RECRUITER.equals(user.getRole())) {
+                            recruiterDashboardService.updateProfilePhotoUrl(user.getId(), fileUrl);
+                            log.info("Saved profile photo URL for recruiter: {}", email);
+                        } else {
+                            artistProfileService.updateProfilePhotoUrl(user.getId(), fileUrl);
+                            log.info("Saved profile photo URL for artist: {}", email);
+                        }
                         break;
                     case "COVER_PHOTO":
                         artistProfileService.updateCoverPhotoUrl(user.getId(), fileUrl);
@@ -339,7 +347,12 @@ public class UploadController {
                     break;
                 case "PROFILE_PHOTO":
                 case "ARTIST_PROFILE":
-                    savedUrl = artistProfileService.updateProfilePhotoUrl(user.getId(), fileUrl);
+                    // Check user role and update appropriate profile
+                    if (User.UserRole.RECRUITER.equals(user.getRole())) {
+                        savedUrl = recruiterDashboardService.updateProfilePhotoUrl(user.getId(), fileUrl);
+                    } else {
+                        savedUrl = artistProfileService.updateProfilePhotoUrl(user.getId(), fileUrl);
+                    }
                     break;
                 case "COVER_PHOTO":
                     savedUrl = artistProfileService.updateCoverPhotoUrl(user.getId(), fileUrl);

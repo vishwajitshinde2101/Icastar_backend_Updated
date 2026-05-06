@@ -781,6 +781,7 @@ public class RecruiterDashboardService {
         dto.setCompanyDescription(recruiterProfile.getCompanyDescription());
         dto.setCompanyWebsite(recruiterProfile.getCompanyWebsite());
         dto.setCompanyLogoUrl(recruiterProfile.getCompanyLogoUrl());
+        dto.setProfilePhotoUrl(recruiterProfile.getProfilePhotoUrl());
         dto.setIndustry(recruiterProfile.getIndustry());
         dto.setCompanySize(recruiterProfile.getCompanySize());
         dto.setLocation(recruiterProfile.getLocation());
@@ -827,6 +828,9 @@ public class RecruiterDashboardService {
         if (updateDto.getCompanyLogoUrl() != null) {
             recruiterProfile.setCompanyLogoUrl(updateDto.getCompanyLogoUrl());
         }
+        if (updateDto.getProfilePhotoUrl() != null) {
+            recruiterProfile.setProfilePhotoUrl(updateDto.getProfilePhotoUrl());
+        }
         if (updateDto.getIndustry() != null) {
             recruiterProfile.setIndustry(updateDto.getIndustry());
         }
@@ -857,6 +861,24 @@ public class RecruiterDashboardService {
 
         // Return updated profile
         return getRecruiterProfile(email);
+    }
+
+    /**
+     * Update recruiter profile photo URL
+     * @param userId User ID
+     * @param profilePhotoUrl URL of the profile photo
+     * @return Updated profile photo URL
+     */
+    @Transactional
+    public String updateProfilePhotoUrl(Long userId, String profilePhotoUrl) {
+        RecruiterProfile recruiterProfile = recruiterProfileRepository.findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("Recruiter profile not found"));
+
+        recruiterProfile.setProfilePhotoUrl(profilePhotoUrl);
+        recruiterProfileRepository.save(recruiterProfile);
+
+        log.info("Updated profile photo URL for recruiter user ID: {}", userId);
+        return profilePhotoUrl;
     }
 
     @Transactional

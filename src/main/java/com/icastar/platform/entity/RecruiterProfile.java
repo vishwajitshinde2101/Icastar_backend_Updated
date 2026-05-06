@@ -41,6 +41,9 @@ public class RecruiterProfile extends BaseEntity {
     @Column(name = "company_logo_url")
     private String companyLogoUrl;
 
+    @Column(name = "profile_photo_url")
+    private String profilePhotoUrl;
+
     @Column(name = "industry")
     private String industry;
 

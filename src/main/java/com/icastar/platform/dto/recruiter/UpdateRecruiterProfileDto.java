@@ -10,6 +10,7 @@ public class UpdateRecruiterProfileDto {
     private String companyDescription;
     private String companyWebsite;
     private String companyLogoUrl;
+    private String profilePhotoUrl;
     private String industry;
     private String companySize;
 
