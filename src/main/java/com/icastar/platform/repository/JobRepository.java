@@ -117,7 +117,24 @@ public interface JobRepository extends JpaRepository<Job, Long> {
     Long countByStatus(Job.JobStatus status);
 
     // Find jobs with comprehensive filters
-    @Query("SELECT j FROM Job j WHERE " +
+    @Query(value = "SELECT j FROM Job j " +
+           "LEFT JOIN FETCH j.recruiter r " +
+           "LEFT JOIN FETCH r.recruiterProfile " +
+           "WHERE " +
+           "(:searchTerm IS NULL OR " +
+           "LOWER(j.title) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
+           "LOWER(j.description) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
+           "LOWER(j.requirements) LIKE LOWER(CONCAT('%', :searchTerm, '%'))) AND " +
+           "(:jobType IS NULL OR j.jobType = :jobType) AND " +
+           "(:experienceLevel IS NULL OR j.experienceLevel = :experienceLevel) AND " +
+           "(:status IS NULL OR j.status = :status) AND " +
+           "(:minPay IS NULL OR j.budgetMin >= :minPay) AND " +
+           "(:maxPay IS NULL OR j.budgetMax <= :maxPay) AND " +
+           "(:location IS NULL OR LOWER(j.location) LIKE LOWER(CONCAT('%', :location, '%'))) AND " +
+           "(:isRemote IS NULL OR j.isRemote = :isRemote) AND " +
+           "(:isUrgent IS NULL OR j.isUrgent = :isUrgent) AND " +
+           "(:isFeatured IS NULL OR j.isFeatured = :isFeatured)",
+           countQuery = "SELECT COUNT(j) FROM Job j WHERE " +
            "(:searchTerm IS NULL OR " +
            "LOWER(j.title) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
            "LOWER(j.description) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +

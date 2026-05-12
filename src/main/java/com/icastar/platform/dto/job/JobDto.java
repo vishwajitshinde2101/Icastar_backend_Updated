@@ -15,6 +15,9 @@ public class JobDto {
     private Long recruiterId;
     private String recruiterName;
     private String recruiterEmail;
+    private String companyName;
+    private String companyWebsite;
+    private String companyLogoUrl;
     private String title;
     private String description;
     private String requirements;
@@ -59,6 +62,14 @@ public class JobDto {
         this.recruiterId = job.getRecruiter().getId();
         this.recruiterName = job.getRecruiter().getFirstName() + " " + job.getRecruiter().getLastName();
         this.recruiterEmail = job.getRecruiter().getEmail();
+
+        // Get company details from recruiter profile
+        if (job.getRecruiter().getRecruiterProfile() != null) {
+            this.companyName = job.getRecruiter().getRecruiterProfile().getCompanyName();
+            this.companyWebsite = job.getRecruiter().getRecruiterProfile().getCompanyWebsite();
+            this.companyLogoUrl = job.getRecruiter().getRecruiterProfile().getCompanyLogoUrl();
+        }
+
         this.title = job.getTitle();
         this.description = job.getDescription();
         this.requirements = job.getRequirements();
