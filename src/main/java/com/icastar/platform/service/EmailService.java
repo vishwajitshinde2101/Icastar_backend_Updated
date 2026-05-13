@@ -26,6 +26,45 @@ public class EmailService {
     @Value("${spring.mail.username}")
     private String fromEmail;
 
+    /**
+     * Send HTML email
+     */
+    @Async
+    @Transactional
+    public void sendHtmlEmail(String toEmail, String subject, String htmlBody) {
+        CommunicationLog logEntry = null;
+        try {
+            logEntry = communicationLogService.createLog(
+                CommunicationLog.CommunicationType.EMAIL,
+                toEmail,
+                null,
+                subject,
+                htmlBody,
+                "GENERAL_HTML_EMAIL",
+                null,
+                "{\"type\":\"html_email\"}"
+            );
+
+            MimeMessage mimeMessage = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
+            helper.setFrom(fromEmail);
+            helper.setTo(toEmail);
+            helper.setSubject(subject);
+            helper.setText(htmlBody, true);
+
+            mailSender.send(mimeMessage);
+
+            communicationLogService.markAsSent(logEntry.getId(), null);
+            log.info("HTML email sent successfully to: {} with subject: {}", toEmail, subject);
+
+        } catch (Exception e) {
+            log.error("Failed to send HTML email to: {}", toEmail, e);
+            if (logEntry != null) {
+                communicationLogService.markAsFailed(logEntry.getId(), e.getMessage());
+            }
+        }
+    }
+
     @Async
     @Transactional
     public void sendOtpEmail(String toEmail, String otp) {

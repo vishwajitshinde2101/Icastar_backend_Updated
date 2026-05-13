@@ -4,10 +4,12 @@ import com.icastar.platform.dto.auth.*;
 import com.icastar.platform.entity.ArtistProfile;
 import com.icastar.platform.entity.ArtistType;
 import com.icastar.platform.entity.Otp;
+import com.icastar.platform.entity.PasswordResetToken;
 import com.icastar.platform.entity.RecruiterProfile;
 import com.icastar.platform.entity.User;
 import com.icastar.platform.repository.ArtistProfileRepository;
 import com.icastar.platform.repository.ArtistTypeRepository;
+import com.icastar.platform.repository.PasswordResetTokenRepository;
 import com.icastar.platform.repository.RecruiterProfileRepository;
 import com.icastar.platform.repository.UserRepository;
 import com.icastar.platform.security.JwtTokenProvider;
@@ -36,6 +38,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/auth")
@@ -53,6 +56,7 @@ public class AuthController {
     private final RecruiterProfileRepository recruiterProfileRepository;
     private final ArtistProfileRepository artistProfileRepository;
     private final ArtistTypeRepository artistTypeRepository;
+    private final PasswordResetTokenRepository passwordResetTokenRepository;
 
 
     @Operation(
@@ -321,6 +325,198 @@ public class AuthController {
             response.put("error", e.getMessage());
             return ResponseEntity.badRequest().body(response);
         }
+    }
+
+    // ==================== EMAIL-BASED FORGOT PASSWORD ====================
+
+    /**
+     * Request password reset via email
+     * POST /api/auth/forgot-password
+     * Sends a reset link to the user's email
+     */
+    @Operation(summary = "Request password reset", description = "Send password reset link to user's email")
+    @PostMapping("/forgot-password/email")
+    @Transactional
+    public ResponseEntity<Map<String, Object>> forgotPasswordEmail(@Valid @RequestBody ForgotPasswordRequestDto request) {
+        try {
+            log.info("Password reset requested for email: {}", request.getEmail());
+
+            // Find user by email
+            User user = userRepository.findByEmail(request.getEmail()).orElse(null);
+
+            // Always return success to prevent email enumeration attacks
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "If an account exists with this email, you will receive a password reset link shortly.");
+
+            if (user == null) {
+                log.warn("Password reset requested for non-existent email: {}", request.getEmail());
+                return ResponseEntity.ok(response);
+            }
+
+            // Invalidate any existing tokens for this user
+            passwordResetTokenRepository.invalidateAllUserTokens(user, LocalDateTime.now());
+
+            // Generate new reset token
+            String token = UUID.randomUUID().toString();
+            PasswordResetToken resetToken = new PasswordResetToken(token, user);
+            passwordResetTokenRepository.save(resetToken);
+
+            // Send reset email
+            String resetLink = "https://app.icastar.com/reset-password?token=" + token;
+            String emailBody = buildPasswordResetEmail(user.getFirstName(), resetLink);
+            emailService.sendHtmlEmail(user.getEmail(), "Reset Your Password - iCastar", emailBody);
+
+            log.info("Password reset email sent to: {}", request.getEmail());
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            log.error("Error processing forgot password request", e);
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "Failed to process password reset request");
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    /**
+     * Verify reset token is valid
+     * GET /api/auth/verify-reset-token?token=xxx
+     */
+    @Operation(summary = "Verify reset token", description = "Check if password reset token is valid")
+    @GetMapping("/verify-reset-token")
+    public ResponseEntity<Map<String, Object>> verifyResetToken(@RequestParam String token) {
+        try {
+            PasswordResetToken resetToken = passwordResetTokenRepository.findByToken(token)
+                    .orElse(null);
+
+            Map<String, Object> response = new HashMap<>();
+
+            if (resetToken == null) {
+                response.put("success", false);
+                response.put("valid", false);
+                response.put("message", "Invalid reset token");
+                return ResponseEntity.badRequest().body(response);
+            }
+
+            if (!resetToken.isValid()) {
+                response.put("success", false);
+                response.put("valid", false);
+                response.put("message", resetToken.isExpired() ? "Reset token has expired" : "Reset token has already been used");
+                return ResponseEntity.badRequest().body(response);
+            }
+
+            response.put("success", true);
+            response.put("valid", true);
+            response.put("email", resetToken.getUser().getEmail());
+            response.put("message", "Token is valid");
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            log.error("Error verifying reset token", e);
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "Failed to verify token");
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    /**
+     * Reset password using token
+     * POST /api/auth/reset-password/email
+     */
+    @Operation(summary = "Reset password with token", description = "Reset password using the token received via email")
+    @PostMapping("/reset-password/email")
+    @Transactional
+    public ResponseEntity<Map<String, Object>> resetPasswordWithToken(@Valid @RequestBody ResetPasswordRequestDto request) {
+        try {
+            // Validate passwords match
+            if (!request.getNewPassword().equals(request.getConfirmPassword())) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", false);
+                response.put("message", "Passwords do not match");
+                return ResponseEntity.badRequest().body(response);
+            }
+
+            // Find and validate token
+            PasswordResetToken resetToken = passwordResetTokenRepository.findByToken(request.getToken())
+                    .orElseThrow(() -> new RuntimeException("Invalid reset token"));
+
+            if (!resetToken.isValid()) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", false);
+                response.put("message", resetToken.isExpired() ? "Reset token has expired" : "Reset token has already been used");
+                return ResponseEntity.badRequest().body(response);
+            }
+
+            // Update user password
+            User user = resetToken.getUser();
+            user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+            user.setFailedLoginAttempts(0);
+            user.setAccountLockedUntil(null);
+            userRepository.save(user);
+
+            // Mark token as used
+            resetToken.markAsUsed();
+            passwordResetTokenRepository.save(resetToken);
+
+            log.info("Password reset successful for user: {}", user.getEmail());
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Password reset successful. You can now login with your new password.");
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            log.error("Error resetting password with token", e);
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "Failed to reset password: " + e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    /**
+     * Build HTML email body for password reset
+     */
+    private String buildPasswordResetEmail(String firstName, String resetLink) {
+        return """
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <style>
+                    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                    .header { background-color: #f59e0b; color: white; padding: 20px; text-align: center; }
+                    .content { padding: 20px; background-color: #f9fafb; }
+                    .button { display: inline-block; padding: 12px 24px; background-color: #f59e0b; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+                    .footer { padding: 20px; text-align: center; font-size: 12px; color: #666; }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1>iCastar</h1>
+                    </div>
+                    <div class="content">
+                        <h2>Password Reset Request</h2>
+                        <p>Hi %s,</p>
+                        <p>We received a request to reset your password. Click the button below to create a new password:</p>
+                        <p style="text-align: center;">
+                            <a href="%s" class="button">Reset Password</a>
+                        </p>
+                        <p>This link will expire in 30 minutes.</p>
+                        <p>If you didn't request this password reset, you can safely ignore this email. Your password will remain unchanged.</p>
+                        <p>Best regards,<br>The iCastar Team</p>
+                    </div>
+                    <div class="footer">
+                        <p>This is an automated email. Please do not reply.</p>
+                        <p>&copy; 2024 iCastar. All rights reserved.</p>
+                    </div>
+                </div>
+            </body>
+            </html>
+            """.formatted(firstName != null ? firstName : "User", resetLink);
     }
 
     // Email-based authentication endpoints (without OTP verification)
