@@ -363,7 +363,7 @@ public class AuthController {
             passwordResetTokenRepository.save(resetToken);
 
             // Send reset email
-            String resetLink = "https://app.icastar.com/reset-password?token=" + token;
+            String resetLink = "https://www.icastar.com/reset-password?token=" + token;
             String emailBody = buildPasswordResetEmail(user.getFirstName(), resetLink);
             emailService.sendHtmlEmail(user.getEmail(), "Reset Your Password - iCastar", emailBody);
 
