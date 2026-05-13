@@ -60,7 +60,8 @@ public class SecurityConfig {
                                 "/v3/api-docs/**",
                                 "/actuator/health",
                                 "/error",
-                                "/auth/forgot-password/email"
+                                "/auth/forgot-password/email",
+                                "/auth/reset-password/email"
                         ).permitAll()
 
                         // CORS preflight is always public
